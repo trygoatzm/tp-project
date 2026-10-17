@@ -1,14 +1,10 @@
-"""Базовая сцена и менеджер сцен"""
-
-
 class Scene:
-    """Базовый класс экрана. Наследники переопределяют три метода."""
 
     def __init__(self, game):
         self.game = game
 
     def on_enter(self, **kwargs):
-        """Вызывается при переходе на сцену."""
+        pass
 
     def handle_event(self, event):
         pass

@@ -1,4 +1,3 @@
-"""Главный цикл"""
 import pygame
 
 from src import settings
