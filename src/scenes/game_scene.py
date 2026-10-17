@@ -1,7 +1,8 @@
 """Игровой экран. Заглушка тимлида; наполняют остальные роли."""
 import pygame
 from src.core.scene_manager import Scene
-
+from src.entities.player import Player
+from src.systems.combat import CombatSystem, read_controls
 
 class GameScene(Scene):
     def handle_event(self, event):
@@ -25,3 +26,5 @@ class GameScene(Scene):
     def draw(self, surface):
         font = pygame.font.Font(None, 48)
         surface.blit(font.render("GAME: Esc - menu, E - end", True, (255, 255, 255)), (40, 40))
+    def reload_room(self):
+        pass
