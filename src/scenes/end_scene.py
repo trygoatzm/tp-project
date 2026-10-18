@@ -1,4 +1,3 @@
-"""Финальный экран. Заглушка тимлида: диплом красный при 0 смертей, иначе синий."""
 import pygame
 from src.core.scene_manager import Scene
 

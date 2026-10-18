@@ -13,7 +13,7 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(s.health, 3)
         self.assertTrue(s.damage(10))
         self.assertEqual(s.health, 0)
-        self.assertFalse(s.damage(1))      # уже мёртв — повторной смерти нет
+        self.assertFalse(s.damage(1))
         s.register_death()
         self.assertEqual((s.deaths, s.health), (1, 5))
         self.assertFalse(s.red_diploma)

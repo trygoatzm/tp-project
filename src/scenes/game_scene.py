@@ -1,4 +1,3 @@
-"""Игровой экран. Заглушка тимлида; наполняют остальные роли."""
 import pygame
 from src.core.scene_manager import Scene
 from src.entities.player import Player

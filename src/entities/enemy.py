@@ -1,9 +1,3 @@
-"""Враг ближнего боя. Владелец: роль 5 «Враги и боссы».
-Поведение: идёт к герою -> остановился на дистанции удара -> замах (windup) -> короткий удар -> пауза (cooldown).
-Удар бьёт в то место, где герой стоял в начале замаха, поэтому от него можно увернуться.
-Без pygame в логике. Контракт с боевой системой (роль 4): rect, alive, take_damage, contact_damage,
-take_projectiles, attack_hitbox.
-"""
 import math
 
 
@@ -17,7 +11,7 @@ def direction(src, dst):
 
 class Enemy:
     SIZE = 24
-    STRIKE_TIME = 0.15      # сколько секунд удар «активен»
+    STRIKE_TIME = 0.15
 
     def __init__(self, data, pos):
         self.id = data["id"]
@@ -29,7 +23,7 @@ class Enemy:
         self.speed = data["speed"]
         self.contact_damage = data["contact_damage"]
         self.attack = data.get("attack")
-        self.x, self.y = float(pos[0]), float(pos[1])     # центр
+        self.x, self.y = float(pos[0]), float(pos[1])
         self.alive = True
         self.hurt_timer = 0.0
         self._projectiles = []
@@ -37,7 +31,7 @@ class Enemy:
         self.timer = 0.0
         self.strike_dir = (1.0, 0.0)
 
-    # ---------- контракт с боем ----------
+
     @property
     def rect(self):
         h = self.SIZE / 2
@@ -69,16 +63,15 @@ class Enemy:
         cy = self.y + self.strike_dir[1] * r / 2
         return ((cx - side / 2, cy - side / 2, side, side), self.attack["damage"])
 
-    # ---------- движение ----------
+
     def _step_towards(self, dt, room, target, speed):
         (ux, uy), _ = direction(self.center, target)
         h = self.SIZE / 2
         nx, ny = room.slide((self.x - h, self.y - h, self.SIZE, self.SIZE), ux * speed * dt, uy * speed * dt)
         self.x, self.y = nx + h, ny + h
 
-    # ---------- кадр ----------
+
     def update(self, dt, room, target):
-        """target — центр героя (x, y) в пикселях."""
         if not self.alive:
             return
         self.hurt_timer = max(0.0, self.hurt_timer - dt)
@@ -102,7 +95,6 @@ class Enemy:
             if self.timer <= 0:
                 self.state = "chase"
 
-    # ---------- рисование ----------
     def draw(self, surface):
         import pygame
         h = self.SIZE
@@ -115,6 +107,5 @@ class Enemy:
             pygame.draw.rect(surface, (200, 60, 60), self.rect)
         if self.hurt_timer > 0:
             pygame.draw.rect(surface, (255, 255, 255), self.rect, 2)
-        if self.state == "windup":                       # предупреждение об ударе
+        if self.state == "windup":
             pygame.draw.circle(surface, (255, 200, 0), (int(self.x), int(self.y - h)), 4)
-
