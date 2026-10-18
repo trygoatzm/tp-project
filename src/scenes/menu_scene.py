@@ -1,4 +1,3 @@
-"""Экран меню. Заглушка тимлида; потом заменяет «Интерфейс и звук»."""
 import pygame
 from src.core.scene_manager import Scene
 

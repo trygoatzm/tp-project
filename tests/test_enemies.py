@@ -17,7 +17,6 @@ BOSS = {"id": "boss_t", "name": "Б", "kind": "boss", "sprite": "boss_t", "hp": 
 
 
 class OpenRoom:
-    """Пустая комната 960x540 с границей; плюс необязательная стена."""
 
     def __init__(self, walls=()):
         self.walls = list(walls)
@@ -50,27 +49,26 @@ class TestMelee(unittest.TestCase):
 
     def test_attack_cycle(self):
         e = Enemy(MELEE, (100, 270))
-        target = (120, 270)                       # уже в зоне удара
+        target = (120, 270)
         e.update(0.02, OpenRoom(), target)
         self.assertEqual(e.state, "windup")
-        self.assertIsNone(e.attack_hitbox())      # во время замаха бить нельзя
+        self.assertIsNone(e.attack_hitbox())
         run(e, OpenRoom(), target, 0.42)
         self.assertEqual(e.state, "strike")
         box, dmg = e.attack_hitbox()
         self.assertEqual(dmg, 1)
         bx, by, bw, bh = box
-        self.assertTrue(bx <= target[0] <= bx + bw and by <= target[1] <= by + bh)   # герой на месте — попадание
+        self.assertTrue(bx <= target[0] <= bx + bw and by <= target[1] <= by + bh)
         run(e, OpenRoom(), target, 0.2)
         self.assertEqual(e.state, "cooldown")
         self.assertIsNone(e.attack_hitbox())
         run(e, OpenRoom(), target, 1.05)
-        self.assertEqual(e.state, "windup")       # цель всё ещё рядом -> новый цикл атаки
+        self.assertEqual(e.state, "windup")
 
     def test_dodge_possible(self):
-        """Герой отошёл во время замаха — хитбокс его не накрывает."""
         e = Enemy(MELEE, (100, 270))
         e.update(0.02, OpenRoom(), (120, 270))
-        run(e, OpenRoom(), (300, 270), 0.42)      # цель далеко; strike_dir зафиксирован в начале замаха
+        run(e, OpenRoom(), (300, 270), 0.42)
         box, _ = e.attack_hitbox()
         bx, by, bw, bh = box
         self.assertFalse(bx <= 300 <= bx + bw)
@@ -124,4 +122,3 @@ class TestLoader(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

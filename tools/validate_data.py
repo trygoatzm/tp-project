@@ -1,8 +1,3 @@
-#Проверка JSON-файлов по docs/FORMAT.md. Владелец: архитектор.
-#Запуск из корня проекта:  python tools/validate_data.py
-#С ключом --strict дополнительно требует, чтобы все комнаты из data/levels.json существовали.
-#Код выхода 0 — всё хорошо, 1 — есть ошибки. Только стандартная библиотека.
-
 import json
 import sys
 from pathlib import Path
