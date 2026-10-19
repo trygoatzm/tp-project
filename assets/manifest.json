@@ -1,0 +1,21 @@
+{
+  "player_idle": "images/player_idle.png",
+  "enemy_english_melee": "images/enemy_english_melee.png",
+  "enemy_binary_melee": "images/enemy_binary_melee.png",
+  "enemy_formula_melee": "images/enemy_formula_melee.png",
+  "boss_level1": "images/boss_level1.png",
+  "boss_level2": "images/boss_level2.png",
+  "boss_commission": "images/boss_commission.png",
+  "npc_l1_entrance_npc": "images/npc_l1_entrance_npc.png",
+  "npc_l2_entrance_npc": "images/npc_l2_entrance_npc.png",
+  "npc_l3_entrance_npc": "images/npc_l3_entrance_npc.png",
+  "bg_entrance_l1": "images/bg_entrance_l1.png",
+  "bg_entrance_l2": "images/bg_entrance_l2.png",
+  "bg_entrance_l3": "images/bg_entrance_l3.png",
+  "bg_level1_yard": "images/bg_level1_yard.png",
+  "bg_level1_boss": "images/bg_level1_boss.png",
+  "bg_level2_class": "images/bg_level2_class.png",
+  "bg_level2_boss": "images/bg_level2_boss.png",
+  "bg_level3_hall": "images/bg_level3_hall.png",
+  "bg_level3_boss": "images/bg_level3_boss.png"
+}
