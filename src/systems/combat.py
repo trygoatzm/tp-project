@@ -4,8 +4,12 @@ from src.entities.projectile import rects_overlap
 def read_controls():
     import pygame
     keys = pygame.key.get_pressed()
-    mx = (1 if keys[pygame.K_RIGHT] else 0) - (1 if keys[pygame.K_LEFT] else 0)
-    my = (1 if keys[pygame.K_DOWN] else 0) - (1 if keys[pygame.K_UP] else 0)
+    right = keys[pygame.K_RIGHT] or keys[pygame.K_d]
+    left = keys[pygame.K_LEFT] or keys[pygame.K_a]
+    down = keys[pygame.K_DOWN] or keys[pygame.K_s]
+    up = keys[pygame.K_UP] or keys[pygame.K_w]
+    mx = (1 if right else 0) - (1 if left else 0)
+    my = (1 if down else 0) - (1 if up else 0)
     return (mx, my), pygame.mouse.get_pos(), pygame.mouse.get_pressed()[0]
 
 

@@ -6,10 +6,11 @@ from src.entities.projectile import Projectile
 
 class Player:
     SIZE = 20
-    SHOT_COOLDOWN = 0.30
+    SHOT_COOLDOWN = 0.40
     SHOT_SPEED = 520
     SHOT_DAMAGE = 1
     HAND = 14
+    SHOT_LIFETIME = 0.8
 
     def __init__(self, pos):
         self.x, self.y = float(pos[0]), float(pos[1])
@@ -60,7 +61,8 @@ class Player:
             ux, uy = self.aim
             shots.append(Projectile(self.x + ux * self.HAND, self.y + uy * self.HAND,
                                     ux * self.SHOT_SPEED, uy * self.SHOT_SPEED,
-                                    damage=self.SHOT_DAMAGE, owner="player"))
+                                    damage=self.SHOT_DAMAGE, owner="player",
+                                    lifetime=self.SHOT_LIFETIME))
         return shots
 
     def take_hit(self, amount, state):
