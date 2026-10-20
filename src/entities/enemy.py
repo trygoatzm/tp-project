@@ -1,4 +1,5 @@
 import math
+from collections import deque
 
 
 def direction(src, dst):
@@ -12,6 +13,8 @@ def direction(src, dst):
 class Enemy:
     SIZE = 24
     STRIKE_TIME = 0.15
+    REPATH_TIME = 0.3
+    WAYPOINT_REACHED = 6
 
     def __init__(self, data, pos):
         self.id = data["id"]
@@ -30,7 +33,8 @@ class Enemy:
         self.state = "chase"
         self.timer = 0.0
         self.strike_dir = (1.0, 0.0)
-
+        self.waypoint = None
+        self.path_timer = 0.0
 
     @property
     def rect(self):
@@ -63,13 +67,69 @@ class Enemy:
         cy = self.y + self.strike_dir[1] * r / 2
         return ((cx - side / 2, cy - side / 2, side, side), self.attack["damage"])
 
+    def _line_clear(self, room, src, dst):
+        half = self.SIZE / 2
+        steps = int(math.hypot(dst[0] - src[0], dst[1] - src[1]) // 10) + 1
+        for i in range(1, steps + 1):
+            t = i / steps
+            x = src[0] + (dst[0] - src[0]) * t
+            y = src[1] + (dst[1] - src[1]) * t
+            if room.blocked((x - half, y - half, self.SIZE, self.SIZE)):
+                return False
+        return True
+
+    def _find_waypoint(self, room, target):
+        """Кратчайший путь по клеткам (BFS) в обход стен; возвращает ближайшую видимую точку пути."""
+        tile = getattr(room, "tile", 30)
+        width, height = getattr(room, "size_px", (960, 540))
+        cols, rows = width // tile, height // tile
+        half = self.SIZE / 2
+
+        def free(cell):
+            cx, cy = cell[0] * tile + tile / 2, cell[1] * tile + tile / 2
+            return not room.blocked((cx - half, cy - half, self.SIZE, self.SIZE))
+
+        start = (int(self.x // tile), int(self.y // tile))
+        goal = (int(target[0] // tile), int(target[1] // tile))
+        parent = {start: None}
+        queue = deque([start])
+        while queue and goal not in parent:
+            cell = queue.popleft()
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nxt = (cell[0] + dx, cell[1] + dy)
+                if 0 <= nxt[0] < cols and 0 <= nxt[1] < rows and nxt not in parent and (nxt == goal or free(nxt)):
+                    parent[nxt] = cell
+                    queue.append(nxt)
+        if goal not in parent:
+            return None
+        path = []
+        cell = goal
+        while cell is not None:
+            path.append(cell)
+            cell = parent[cell]
+        path.reverse()
+        points = [(c[0] * tile + tile / 2, c[1] * tile + tile / 2) for c in path[1:]]
+        for point in reversed(points):
+            if self._line_clear(room, self.center, point):
+                return point
+        return points[0] if points else None
 
     def _step_towards(self, dt, room, target, speed):
-        (ux, uy), _ = direction(self.center, target)
+        if self._line_clear(room, self.center, target):
+            dest = target
+            self.waypoint = None
+        else:
+            self.path_timer -= dt
+            if self.waypoint is None or self.path_timer <= 0:
+                self.waypoint = self._find_waypoint(room, target)
+                self.path_timer = self.REPATH_TIME
+            dest = self.waypoint or target
+        (ux, uy), dist = direction(self.center, dest)
+        if self.waypoint is not None and dist < self.WAYPOINT_REACHED:
+            self.waypoint = None
         h = self.SIZE / 2
         nx, ny = room.slide((self.x - h, self.y - h, self.SIZE, self.SIZE), ux * speed * dt, uy * speed * dt)
         self.x, self.y = nx + h, ny + h
-
 
     def update(self, dt, room, target):
         if not self.alive:
