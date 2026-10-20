@@ -3,8 +3,8 @@
   "name": "Интегралыч",
   "kind": "melee",
   "sprite": "enemy_formula_melee",
-  "hp": 4,
-  "speed": 110,
+  "hp": 6,
+  "speed": 150,
   "contact_damage": 1,
   "attack": {
     "range": 38,
