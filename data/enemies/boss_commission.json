@@ -1,0 +1,37 @@
+{
+  "id": "boss_commission",
+  "name": "Комиссия",
+  "kind": "boss",
+  "sprite": "boss_commission",
+  "hp": 60,
+  "speed": 90,
+  "contact_damage": 1,
+  "attacks": [
+    {
+      "type": "fan",
+      "projectiles": 9,
+      "spread_deg": 100,
+      "speed": 300,
+      "windup": 0.6,
+      "damage": 1,
+      "cooldown": 1.6
+    },
+    {
+      "type": "dash",
+      "speed": 600,
+      "duration": 0.5,
+      "windup": 0.5,
+      "damage": 1,
+      "cooldown": 2.4
+    },
+    {
+      "type": "fan",
+      "projectiles": 5,
+      "spread_deg": 40,
+      "speed": 340,
+      "windup": 0.4,
+      "damage": 1,
+      "cooldown": 1.4
+    }
+  ]
+}
