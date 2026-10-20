@@ -1,4 +1,3 @@
-"""Главное меню. Владелец: роль 7 (каркас создал тимлид)."""
 import pygame
 
 from src.core.scene_manager import Scene

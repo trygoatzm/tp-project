@@ -11,7 +11,6 @@ def draw_text(surface, text, pos, size=24, color=(255, 255, 255), center=False):
     rect = img.get_rect(center=pos) if center else img.get_rect(topleft=pos)
     surface.blit(img, rect)
 def wrap(text, font, max_width):
-    """Разбить текст на строки не шире max_width пикселей."""
     lines, line = [], ""
     for word in text.split():
         test = f"{line} {word}".strip()
