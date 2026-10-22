@@ -36,13 +36,14 @@
 
 | Роль | Владелец | Закрепленные файлы и папки |
 |---|---|---|
-| **1. Тимлид** | Тимлид | `main.py`, `src/core/game.py`, `src/core/scene_manager.py`, `src/scenes/game_scene.py`, `README.md`, `requirements.txt`, `.gitignore`, `.github/**`, `build/`, `docs/WORKFLOW.md` *(а также заглушки `menu_scene.py`, `end_scene.py` до передачи роли 7)* |
+**1. Тимлид** | Тимлид | `main.py`, `src/core/game.py`, `src/core/scene_manager.py`, `src/scenes/game_scene.py`, `README.md`, `requirements.txt`, `.gitignore`, `.github/**`, `docs/WORKFLOW.md` *(а также заглушки `menu_scene.py`, `end_scene.py` до передачи роли 7)* 
 | **2. Архитектор** | Архитектор | `src/settings.py` (после дня 1), `src/core/state.py` (`GameState`), `docs/architecture.md`, `docs/FORMAT.md`, `tools/validate_data.py`, `data/levels.json`, схемы JSON в `data/` |
 | **3. Уровни и комнаты** | Разработчик уровней | `src/systems/rooms.py`, `src/systems/level_loader.py`, `src/systems/room_view.py`, `src/systems/assets.py`, `data/rooms/**` |
 | **4. Игрок и бой** | Разработчик боевки | `src/entities/player.py`, `src/entities/projectile.py`, `src/systems/combat.py`, `tests/test_player.py` |
 | **5. Враги и боссы** | Разработчик врагов | `src/entities/enemy.py`, `src/entities/boss.py`, `src/systems/ai.py`, `data/enemies/**` |
 | **6. Диалоги и сюжет** | Сценарист | `src/systems/dialogue.py`, `data/dialogues/**`, `docs/STORY.md` |
-| **7. Интерфейс и звук** | UI/Audio разработчик | `src/ui/**`, `src/systems/audio.py`, `assets/music/**`, `assets/sounds/**`, `src/scenes/menu_scene.py`, `src/scenes/end_scene.py` |
+| **7. Интерфейс** | UI разработчик | `src/ui/**`, `src/scenes/menu_scene.py`, `src/scenes/end_scene.py` |
+| **8. Звук, сборка и проверка** | Звукорежиссёр и тестировщик | `src/systems/audio.py`, `assets/music/**`, `assets/sounds/**`, `assets/AUDIO_CREDITS.md`, `release/**`, `docs/TESTING.md` |
 | **Художник** | Claude Code | `assets/images/**`, `assets/manifest.json` (правятся только по Issue-запросу роли 7) |
 
 ### Общие контракты и договоренности:
@@ -57,10 +58,11 @@
 
 Каждый PR должен получить минимум **1 Approve** перед слиянием. Проверка идет строго по цепочке:
 
-$$\text{1 (Тимлид)} \longrightarrow \text{2 (Архитектор)} \longrightarrow \text{3 (Уровни)} \longrightarrow \text{4 (Бой)} \longrightarrow \text{5 (Враги)} \longrightarrow \text{6 (Сюжет)} \longrightarrow \text{7 (UI/Звук)} \longrightarrow \text{1 (Тимлид)}$$
+$$\text{1 (Тимлид)} \longrightarrow \text{2 (Архитектор)} \longrightarrow \text{3 (Уровни)} \longrightarrow \text{4 (Бой)} \longrightarrow \text{5 (Враги)} \longrightarrow \text{6 (Сюжет)} \longrightarrow \text{7 (Интерфейс)} \longrightarrow \text{8 (Звук и сборка)} \longrightarrow \text{1 (Тимлид)}$$
 
 * Тимлид (1) проверяет Архитектора (2).
-* PR Тимлида (1) проверяет Интерфейс/Звук (7).
+* PR Тимлида (1) проверяет Звук/Сборка (8).
+* PR Звук/Сборка (8) проверяет Интерфейс (7).
 * PR Claude Code проверяет автор запроса (Роль 7).
 
 ### Чек-лист ревьюера:
