@@ -6,6 +6,8 @@ ANIMATED_SPRITES = ("enemy_english_melee", "enemy_binary_melee", "enemy_formula_
 DIRS = ["e", "se", "s", "sw", "w", "nw", "n", "ne"]
 FRAME_COUNT = {"idle": 2, "walk": 4}
 FRAME_RATE = {"idle": 2, "walk": 8}
+DRAW_SIZE = 48              # размер картинки врага на экране (хитбокс SIZE не меняется)
+FEET = 31 / 32              # низ ног в кадре (доля высоты картинки)
 
 
 def dir8(dx, dy):
@@ -187,17 +189,20 @@ class Enemy:
             n = int(self.anim_time * FRAME_RATE[self.anim]) % FRAME_COUNT[self.anim] + 1
         return f"{self.sprite}_{self.anim}_{self.facing}_{n}"
 
+    def draw_rect(self):
+        """Где рисуется картинка: ноги стоят на нижнем крае хитбокса."""
+        top = self.y + self.SIZE / 2 - DRAW_SIZE * FEET
+        return (self.x - DRAW_SIZE / 2, top, DRAW_SIZE, DRAW_SIZE)
+
     def draw(self, surface):
         import pygame
-        h = self.SIZE
-        pos = (self.x - h / 2, self.y - h / 2)
+        x, y, w, h = self.draw_rect()
         try:
             from src.systems.assets import get_image
-            img = get_image(self.frame_key(), (h, h))
-            surface.blit(img, pos)
+            surface.blit(get_image(self.frame_key(), (w, h)), (x, y))
         except ImportError:
             pygame.draw.rect(surface, (200, 60, 60), self.rect)
         if self.hurt_timer > 0:
-            pygame.draw.rect(surface, (255, 255, 255), self.rect, 2)
+            pygame.draw.rect(surface, (255, 255, 255), (x + 8, y + 4, w - 16, h - 6), 2)
         if self.state == "windup":
-            pygame.draw.circle(surface, (255, 200, 0), (int(self.x), int(self.y - h)), 4)
+            pygame.draw.circle(surface, (255, 200, 0), (int(self.x), int(y)), 4)

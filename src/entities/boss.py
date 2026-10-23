@@ -9,6 +9,9 @@ DIRS = ["e", "se", "s", "sw", "w", "nw", "n", "ne"]
 FRAME_COUNT = {"idle": 2, "walk": 4, "shoot": 2}
 FRAME_RATE = {"idle": 2, "walk": 8, "dash": 16}
 SHOT_FLASH_TIME = 0.1
+DRAW_SIZE = 64              # размер картинки босса на экране (хитбокс SIZE = 56 не меняется)
+FEET = 60 / 64              # низ ног в кадре (доля высоты картинки)
+MUZZLE_BASE = 56            # точки вылета в логе измерены для размера 56
 # Откуда вылетают снаряды (смещение от центра, пиксели игры, по сторонам). Из docs/ART_LOG.md.
 _RIGHT_HAND = {"s": (-13, 22), "se": (9, 20), "e": (13, 13), "ne": (19, 3),
                "n": (17, -3), "nw": (-21, -20), "w": (-13, 13), "sw": (-21, 20)}
@@ -99,7 +102,10 @@ class Boss:
         count = max(1, int(atk["projectiles"]))
         spread = atk["spread_deg"]
         self.shot_flash = SHOT_FLASH_TIME
+        k = DRAW_SIZE / MUZZLE_BASE
         ox, oy = MUZZLE.get(self.sprite, {}).get(self.facing, (0, 0))
+        dx, dy, dw, dh = self.draw_rect()
+        ox, oy = ox * k, dy + dh / 2 - self.y + oy * k
         for i in range(count):
             offset = 0.0 if count == 1 else spread * (i / (count - 1) - 0.5)
             self._projectiles.append(Projectile.aimed(
@@ -177,22 +183,27 @@ class Boss:
             n = int(self.anim_time * FRAME_RATE[action]) % FRAME_COUNT[action] + 1
         return f"{self.sprite}_{action}_{self.facing}_{n}"
 
+    def draw_rect(self):
+        """Где рисуется картинка: ноги стоят на нижнем крае хитбокса."""
+        top = self.y + self.SIZE / 2 - DRAW_SIZE * FEET
+        return (self.x - DRAW_SIZE / 2, top, DRAW_SIZE, DRAW_SIZE)
+
     def draw(self, surface):
         import pygame
-        h = self.SIZE
-        pos = (self.x - h / 2, self.y - h / 2)
+        x, y, w, h = self.draw_rect()
         try:
             from src.systems.assets import get_image
-            surface.blit(get_image(self.frame_key(), (h, h)), pos)
+            surface.blit(get_image(self.frame_key(), (w, h)), (x, y))
         except ImportError:
             pygame.draw.rect(surface, (160, 30, 120), self.rect)
+        frame = (x + 6, y + 2, w - 12, h - 4)
         if self.hurt_timer > 0:
-            pygame.draw.rect(surface, (255, 255, 255), self.rect, 3)
+            pygame.draw.rect(surface, (255, 255, 255), frame, 3)
         if self.state == "windup":
-            pygame.draw.rect(surface, (255, 200, 0), self.rect, 3)
+            pygame.draw.rect(surface, (255, 200, 0), frame, 3)
         elif self.state == "dash":
-            pygame.draw.rect(surface, (255, 70, 70), self.rect, 3)
+            pygame.draw.rect(surface, (255, 70, 70), frame, 3)
         bar_w = 120
-        bx, by = self.x - bar_w / 2, self.y - h / 2 - 14
+        bx, by = self.x - bar_w / 2, y - 12
         pygame.draw.rect(surface, (40, 40, 40), (bx, by, bar_w, 7))
         pygame.draw.rect(surface, (210, 50, 50), (bx, by, bar_w * self.hp / self.max_hp, 7))
