@@ -1,6 +1,17 @@
 import math
 from collections import deque
 
+# Спрайты, для которых нарисованы анимации (ключи вида <sprite>_<действие>_<сторона>_<кадр>).
+ANIMATED_SPRITES = ("enemy_english_melee", "enemy_binary_melee", "enemy_formula_melee", "enemy_hse_bird")
+DIRS = ["e", "se", "s", "sw", "w", "nw", "n", "ne"]
+FRAME_COUNT = {"idle": 2, "walk": 4}
+FRAME_RATE = {"idle": 2, "walk": 8}
+
+
+def dir8(dx, dy):
+    angle = math.degrees(math.atan2(dy, dx)) % 360
+    return DIRS[int((angle + 22.5) // 45) % 8]
+
 
 def direction(src, dst):
     dx, dy = dst[0] - src[0], dst[1] - src[1]
@@ -35,6 +46,9 @@ class Enemy:
         self.strike_dir = (1.0, 0.0)
         self.waypoint = None
         self.path_timer = 0.0
+        self.facing = "s"
+        self.anim = "walk"
+        self.anim_time = 0.0
 
     @property
     def rect(self):
@@ -155,13 +169,31 @@ class Enemy:
             if self.timer <= 0:
                 self.state = "chase"
 
+        face = self.strike_dir if self.state in ("windup", "strike") else direction(self.center, target)[0]
+        self.facing = dir8(*face)
+        action = {"chase": "walk", "windup": "attack", "strike": "attack", "cooldown": "idle"}[self.state]
+        if action != self.anim:
+            self.anim = action
+            self.anim_time = 0.0
+        else:
+            self.anim_time += dt
+
+    def frame_key(self):
+        if self.sprite not in ANIMATED_SPRITES:
+            return self.sprite
+        if self.anim == "attack":
+            n = 2 if self.state == "strike" else 1
+        else:
+            n = int(self.anim_time * FRAME_RATE[self.anim]) % FRAME_COUNT[self.anim] + 1
+        return f"{self.sprite}_{self.anim}_{self.facing}_{n}"
+
     def draw(self, surface):
         import pygame
         h = self.SIZE
         pos = (self.x - h / 2, self.y - h / 2)
         try:
             from src.systems.assets import get_image
-            img = get_image(self.sprite, (h, h))
+            img = get_image(self.frame_key(), (h, h))
             surface.blit(img, pos)
         except ImportError:
             pygame.draw.rect(surface, (200, 60, 60), self.rect)
