@@ -1,0 +1,15 @@
+{
+  "id": "hse_bird",
+  "name": "Ворон ВШЭ",
+  "kind": "melee",
+  "sprite": "enemy_hse_bird",
+  "hp": 3,
+  "speed": 170,
+  "contact_damage": 1,
+  "attack": {
+    "range": 28,
+    "windup": 0.3,
+    "cooldown": 1.0,
+    "damage": 1
+  }
+}

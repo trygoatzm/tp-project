@@ -2,7 +2,7 @@
   "id": "boss_commission",
   "name": "Комиссия",
   "kind": "boss",
-  "sprite": "boss_commission",
+  "sprite": "boss_level3",
   "hp": 60,
   "speed": 90,
   "contact_damage": 1,

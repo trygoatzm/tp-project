@@ -3,6 +3,27 @@ import math
 from src.entities.enemy import direction
 from src.entities.projectile import Projectile
 
+# Спрайты боссов, для которых нарисованы анимации (ключи вида <sprite>_<действие>_<сторона>_<кадр>).
+ANIMATED_SPRITES = ("boss_level1", "boss_level2", "boss_level3")
+DIRS = ["e", "se", "s", "sw", "w", "nw", "n", "ne"]
+FRAME_COUNT = {"idle": 2, "walk": 4, "shoot": 2}
+FRAME_RATE = {"idle": 2, "walk": 8, "dash": 16}
+SHOT_FLASH_TIME = 0.1
+# Откуда вылетают снаряды (смещение от центра, пиксели игры, по сторонам). Из docs/ART_LOG.md.
+_RIGHT_HAND = {"s": (-13, 22), "se": (9, 20), "e": (13, 13), "ne": (19, 3),
+               "n": (17, -3), "nw": (-21, -20), "w": (-13, 13), "sw": (-21, 20)}
+MUZZLE = {
+    "boss_level1": _RIGHT_HAND,
+    "boss_level2": _RIGHT_HAND,
+    "boss_level3": {"s": (13, 18), "se": (21, 17), "e": (13, 10), "ne": (21, -24),
+                    "n": (-17, -6), "nw": (-19, -1), "w": (-13, 10), "sw": (-9, 17)},
+}
+
+
+def dir8(dx, dy):
+    angle = math.degrees(math.atan2(dy, dx)) % 360
+    return DIRS[int((angle + 22.5) // 45) % 8]
+
 
 class Boss:
     SIZE = 56
@@ -31,6 +52,11 @@ class Boss:
         self.attack_index = 0
         self.current = None
         self.dash_dir = (1.0, 0.0)
+        self.facing = "s"
+        self.moving = False
+        self.anim = "idle"
+        self.anim_time = 0.0
+        self.shot_flash = 0.0
 
     @property
     def rect(self):
@@ -72,10 +98,12 @@ class Boss:
         center_angle = math.degrees(math.atan2(uy, ux))
         count = max(1, int(atk["projectiles"]))
         spread = atk["spread_deg"]
+        self.shot_flash = SHOT_FLASH_TIME
+        ox, oy = MUZZLE.get(self.sprite, {}).get(self.facing, (0, 0))
         for i in range(count):
             offset = 0.0 if count == 1 else spread * (i / (count - 1) - 0.5)
             self._projectiles.append(Projectile.aimed(
-                self.x, self.y, center_angle + offset, atk["speed"],
+                self.x + ox, self.y + oy, center_angle + offset, atk["speed"],
                 damage=atk["damage"], owner="enemy",
                 radius=self.PROJECTILE_RADIUS, lifetime=self.PROJECTILE_LIFETIME))
 
@@ -83,18 +111,23 @@ class Boss:
         if not self.alive:
             return
         self.hurt_timer = max(0.0, self.hurt_timer - dt)
+        self.shot_flash = max(0.0, self.shot_flash - dt)
+        dir_, dist = direction(self.center, target)
+        if self.state != "dash":
+            self.facing = dir8(*dir_)
+        self.moving = False
 
         if self.state == "rest":
             self.timer -= dt
-            dir_, dist = direction(self.center, target)
             if dist > self.KEEP_DISTANCE:
-                self._move(room, dir_[0] * self.speed * dt, dir_[1] * self.speed * dt)
+                self.moving = self._move(room, dir_[0] * self.speed * dt, dir_[1] * self.speed * dt)
             if self.timer <= 0:
                 self.current = self.attacks[self.attack_index % len(self.attacks)]
                 self.attack_index += 1
                 self.state = "windup"
                 self.timer = self.current.get("windup", self.DEFAULT_WINDUP)
                 self.dash_dir = dir_
+                self.facing = dir8(*dir_)
 
         elif self.state == "windup":
             self.timer -= dt
@@ -106,6 +139,7 @@ class Boss:
                 else:
                     self.state = "dash"
                     self.timer = self.current["duration"]
+                    self.facing = dir8(*self.dash_dir)
 
         elif self.state == "dash":
             self.timer -= dt
@@ -115,13 +149,41 @@ class Boss:
                 self.state = "rest"
                 self.timer = self.current["cooldown"]
 
+        if self.state == "dash":
+            anim = "dash"
+        elif self.state == "windup" or self.shot_flash > 0:
+            anim = "shoot"
+        elif self.moving:
+            anim = "walk"
+        else:
+            anim = "idle"
+        if anim != self.anim:
+            self.anim = anim
+            self.anim_time = 0.0
+        else:
+            self.anim_time += dt
+
+    def frame_key(self):
+        if self.sprite not in ANIMATED_SPRITES:
+            return self.sprite
+        if self.anim == "shoot":
+            n = 2 if self.shot_flash > 0 else 1
+            action = "shoot"
+        elif self.anim == "dash":
+            action = "walk"
+            n = int(self.anim_time * FRAME_RATE["dash"]) % FRAME_COUNT["walk"] + 1
+        else:
+            action = self.anim
+            n = int(self.anim_time * FRAME_RATE[action]) % FRAME_COUNT[action] + 1
+        return f"{self.sprite}_{action}_{self.facing}_{n}"
+
     def draw(self, surface):
         import pygame
         h = self.SIZE
         pos = (self.x - h / 2, self.y - h / 2)
         try:
             from src.systems.assets import get_image
-            surface.blit(get_image(self.sprite, (h, h)), pos)
+            surface.blit(get_image(self.frame_key(), (h, h)), pos)
         except ImportError:
             pygame.draw.rect(surface, (160, 30, 120), self.rect)
         if self.hurt_timer > 0:
