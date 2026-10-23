@@ -7,7 +7,10 @@ DIRS = ["e", "se", "s", "sw", "w", "nw", "n", "ne"]
 FRAME_COUNT = {"idle": 2, "walk": 4, "shoot": 2, "walkshoot": 4}
 FRAME_RATE = {"idle": 2, "walk": 8, "walkshoot": 8}
 SHOT_FLASH_TIME = 0.1
-# Кончик пальца героя относительно центра (x вправо, y вниз), в пикселях игры. Из docs/ART_LOG.md, раздел 3.3.
+DRAW_SIZE = 48              # размер картинки героя на экране (хитбокс SIZE не меняется)
+FEET = 31 / 32              # низ ног в кадре (доля высоты картинки)
+# Кончик пальца относительно центра картинки при размере 20 px (docs/ART_LOG.md, раздел 3.3); масштабируется под DRAW_SIZE.
+MUZZLE_BASE = 20
 MUZZLE = {"s": (-5, 8), "se": (3, 7), "e": (5, 5), "ne": (7, 1),
           "n": (6, -1), "nw": (-8, -7), "w": (-5, 5), "sw": (-8, 7)}
 
@@ -97,12 +100,21 @@ class Player:
             self.cooldown = self.SHOT_COOLDOWN
             self.shot_flash = SHOT_FLASH_TIME
             ux, uy = self.aim
-            ox, oy = MUZZLE[self.facing]
-            shots.append(Projectile(self.x + ox, self.y + oy,
+            sx, sy = self.muzzle_point()
+            shots.append(Projectile(sx, sy,
                                     ux * self.SHOT_SPEED, uy * self.SHOT_SPEED,
                                     damage=self.SHOT_DAMAGE, owner="player",
                                     lifetime=self.SHOT_LIFETIME))
         return shots
+
+    def draw_top(self):
+        """Верх картинки: ноги стоят на нижнем крае хитбокса."""
+        return self.y + self.SIZE / 2 - DRAW_SIZE * FEET
+
+    def muzzle_point(self):
+        k = DRAW_SIZE / MUZZLE_BASE
+        ox, oy = MUZZLE[self.facing]
+        return self.x + ox * k, self.draw_top() + DRAW_SIZE / 2 + oy * k
 
     def take_hit(self, amount, state):
         if self.invuln > 0 or not state.is_alive:
@@ -122,5 +134,5 @@ class Player:
         if not self.visible:
             return
         from src.systems.assets import get_image
-        surface.blit(get_image(self.frame_key(), (self.SIZE, self.SIZE)),
-                     (self.x - self.SIZE / 2, self.y - self.SIZE / 2))
+        surface.blit(get_image(self.frame_key(), (DRAW_SIZE, DRAW_SIZE)),
+                     (self.x - DRAW_SIZE / 2, self.draw_top()))
