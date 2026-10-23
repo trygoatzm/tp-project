@@ -28,6 +28,8 @@ class MenuScene(Scene):
                 self.index = (self.index + step) % len(self.ITEMS)
             elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 self._choose(self.index)
+            elif event.key == pygame.K_ESCAPE:
+                self.game.quit()
             elif event.key == pygame.K_m:
                 #audio.toggle_music()
                 pass
@@ -47,5 +49,5 @@ class MenuScene(Scene):
             color = (70, 90, 160) if i == self.index else (40, 45, 70)
             pygame.draw.rect(surface, color, r, border_radius=8)
             draw_text(surface, name, r.center, 28, center=True)
-        draw_text(surface, "↑/↓ — выбор, Enter — подтвердить, M — музыка",
+        draw_text(surface, "↑/↓ — выбор, Enter — подтвердить, Esc — выход, F11 — окно",
                   (480, 480), 18, (150, 150, 165), center=True)
