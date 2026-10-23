@@ -4,10 +4,12 @@ from src.core.scene_manager import Scene
 from src.ui.dialogue_box import draw_dialogue
 from src.ui.text import draw_text
 
+from src import settings
+
 try:
-    from src.systems.dialogue import load_dialogue
+    from src.systems.dialogue import DialogueSession, load_dialogue
 except ImportError:
-    load_dialogue = None
+    DialogueSession = load_dialogue = None
 
 RED = (200, 30, 30)
 BLUE = (30, 60, 200)
@@ -18,11 +20,11 @@ DIPLOMA = pygame.Rect(280, 70, 400, 260)
 class EndScene(Scene):
     def on_enter(self, deaths=0, **kwargs):
         self.deaths = deaths
-        self.red = deaths <= 0
+        self.red = deaths <= settings.RED_DIPLOMA_MAX_DEATHS
         self.dialogue = None
         if load_dialogue:
             try:
-                self.dialogue = load_dialogue("ending_red" if self.red else "ending_blue")
+                self.dialogue = DialogueSession(load_dialogue("ending_red" if self.red else "ending_blue"))
             except Exception:
                 self.dialogue = None
 
