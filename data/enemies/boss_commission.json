@@ -14,7 +14,7 @@
       "speed": 300,
       "windup": 0.6,
       "damage": 1,
-      "cooldown": 1.6
+      "cooldown": 1.2
     },
     {
       "type": "dash",
@@ -22,7 +22,7 @@
       "duration": 0.5,
       "windup": 0.5,
       "damage": 1,
-      "cooldown": 2.4
+      "cooldown": 1.8
     },
     {
       "type": "fan",
@@ -31,7 +31,7 @@
       "speed": 340,
       "windup": 0.4,
       "damage": 1,
-      "cooldown": 1.4
+      "cooldown": 1.0
     }
   ]
 }

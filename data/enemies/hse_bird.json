@@ -3,7 +3,7 @@
   "name": "Ворон ВШЭ",
   "kind": "melee",
   "sprite": "enemy_hse_bird",
-  "hp": 3,
+  "hp": 2,
   "speed": 170,
   "contact_damage": 1,
   "attack": {

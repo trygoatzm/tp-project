@@ -3,7 +3,7 @@
   "name": "Грамматический страж",
   "kind": "melee",
   "sprite": "enemy_english_melee",
-  "hp": 5,
+  "hp": 3,
   "speed": 130,
   "contact_damage": 1,
   "attack": {
