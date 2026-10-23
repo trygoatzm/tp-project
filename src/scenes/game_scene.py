@@ -6,6 +6,7 @@ from src.systems.ai import alive_count, spawn_all, update_all
 from src.systems.combat import CombatSystem, read_controls
 from src.systems.level_loader import load_levels, load_room
 from src.systems.room_view import draw_room
+from src.ui.hud import Hud
 
 class GameScene(Scene):
     def on_enter(self, **kwargs):
@@ -13,6 +14,8 @@ class GameScene(Scene):
         self.state = GameState(levels)
         self.player = Player((0, 0))
         self.combat = CombatSystem()
+        self.hud = Hud()
+        self.debug = False
         self.reload_room()
 
     def reload_room(self):
@@ -22,14 +25,18 @@ class GameScene(Scene):
         self.enemies = spawn_all(self.room)
 
     def handle_event(self, event):
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            self.game.scenes.change("menu")
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.game.scenes.change("menu")
+            elif event.key == pygame.K_F1:
+                self.debug = not self.debug
 
     def update(self, dt):
         move, aim, shooting = read_controls()
         self.combat.add(self.player.update(dt, self.room, move, aim, shooting))
         update_all(dt, self.room, self.enemies, self.player.center)
         events = self.combat.update(dt, self.room, self.player, self.enemies, self.state)
+        self.hud.update(dt, self.state.health)
 
         self.room.set_enemies_alive(alive_count(self.enemies))
         for kind, amount in self.room.collect_pickups(self.player.rect):
@@ -46,12 +53,9 @@ class GameScene(Scene):
                 self.reload_room()
 
     def draw(self, surface):
-        draw_room(surface, self.room)
-        for e in self.enemies:
-            if e.alive:
-                e.draw(surface)
-        self.player.draw(surface)
+        draw_room(surface, self.room, self.debug)
+        actors = [e for e in self.enemies if e.alive] + [self.player]
+        for actor in sorted(actors, key=lambda a: a.y):
+            actor.draw(surface)
         self.combat.draw(surface)
-        font = pygame.font.Font(None, 28)
-        text = f"HP {self.state.health}/{self.state.max_health}  {self.room.name}"
-        surface.blit(font.render(text, True, (255, 255, 255)), (40, 10))
+        self.hud.draw(surface)
