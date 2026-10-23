@@ -1,14 +1,10 @@
-SCREEN_W = 960
-SCREEN_H = 540
-FPS = 60
-TITLE = "Диплом любой ценой"
-
 from pathlib import Path
 
 SCREEN_W = 960
 SCREEN_H = 540
 FPS = 60
 TITLE = "Диплом любой ценой"
+FULLSCREEN = True           # F11 в игре переключает окно и полный экран
 
 TILE = 30
 ROOM_W_TILES = SCREEN_W // TILE
