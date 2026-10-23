@@ -129,22 +129,22 @@
     {
       "type": "formula_melee",
       "pos": [
-        11,
-        8
+        16,
+        11
       ]
     },
     {
-      "type": "formula_melee",
+      "type": "hse_bird",
       "pos": [
-        21,
+        20,
         9
       ]
     },
     {
-      "type": "formula_melee",
+      "type": "hse_bird",
       "pos": [
-        16,
-        11
+        10,
+        12
       ]
     }
   ],
