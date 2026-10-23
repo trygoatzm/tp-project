@@ -23,7 +23,7 @@ def parse(text, name):
     for y, row in enumerate(rows):
         for x, ch in enumerate(row):
             cells.setdefault(ch, []).append((x, y))
-    unknown = set(cells) - set("#.PEBN+D")
+    unknown = set(cells) - set("#.PEBN+DV")
     if unknown:
         raise ValueError(f"{name}: неизвестные символы {sorted(unknown)}")
     if len(cells.get("P", [])) != 1:
@@ -60,6 +60,9 @@ def parse(text, name):
         door = {"pos": [x0, y0, w, h], "locked_until_clear": meta.get("locked", "false").lower() == "true"}
 
     enemies = [{"type": meta["enemy"], "pos": list(c)} for c in cells.get("E", [])]
+    if cells.get("V") and "bird" not in meta:
+        raise ValueError(f"{name}: есть V, но в шапке нет 'bird:'")
+    enemies += [{"type": meta["bird"], "pos": list(c)} for c in cells.get("V", [])]
     if cells.get("E") and "enemy" not in meta:
         raise ValueError(f"{name}: есть E, но в шапке нет 'enemy:'")
     for c in cells.get("B", []):
