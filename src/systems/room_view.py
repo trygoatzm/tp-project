@@ -8,8 +8,11 @@ DOOR_CLOSED = (170, 60, 60)
 CLOSED_DOOR_ALPHA = 150
 NPC_SIZE = 48
 NPC_FEET = 31 / 32          # низ ног в кадре NPC (доля высоты картинки)
-HEAL_SIZE = 30
+HEAL_SIZE = 32
 HEAL_KEY = "fx_heal"
+HEAL_FLOAT = "fx_heal_float_{}"   # стакан кофе покачивается и вращается: 8 кадров по 0.1 с
+HEAL_FRAMES = 8
+HEAL_FRAME_TIME = 0.1
 
 
 def _has_image(key):
@@ -21,9 +24,11 @@ def _has_image(key):
 
 
 def _draw_heal(surface, cx, cy):
-    if _has_image(HEAL_KEY):
-        surface.blit(get_image(HEAL_KEY, (HEAL_SIZE, HEAL_SIZE)), (cx - HEAL_SIZE // 2, cy - HEAL_SIZE // 2))
-        return
+    frame = int(pygame.time.get_ticks() / 1000 / HEAL_FRAME_TIME) % HEAL_FRAMES + 1
+    for key in (HEAL_FLOAT.format(frame), HEAL_KEY):
+        if _has_image(key):
+            surface.blit(get_image(key, (HEAL_SIZE, HEAL_SIZE)), (cx - HEAL_SIZE // 2, cy - HEAL_SIZE // 2))
+            return
     # пока нет картинки: белый кружок с красным крестом, чтобы было понятно, что это лечение
     pygame.draw.circle(surface, (28, 28, 46), (cx, cy), 11)
     pygame.draw.circle(surface, (244, 244, 240), (cx, cy), 10)
