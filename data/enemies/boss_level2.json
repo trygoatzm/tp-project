@@ -9,8 +9,8 @@
   "attacks": [
     {
       "type": "fan",
-      "projectiles": 7,
-      "spread_deg": 80,
+      "projectiles": 10,
+      "spread_deg": 100,
       "speed": 280,
       "windup": 0.6,
       "damage": 1,

@@ -4,7 +4,7 @@
   "kind": "melee",
   "sprite": "enemy_formula_melee",
   "hp": 6,
-  "speed": 150,
+  "speed": 190,
   "contact_damage": 1,
   "attack": {
     "range": 38,
