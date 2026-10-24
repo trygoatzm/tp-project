@@ -18,6 +18,7 @@ class Projectile:
         self.radius = radius
         self.lifetime = lifetime
         self.alive = True
+        self.age = 0.0
 
     @classmethod
     def aimed(cls, x, y, angle_deg, speed, **kw):
@@ -34,11 +35,20 @@ class Projectile:
             return
         self.x += self.vx * dt
         self.y += self.vy * dt
+        self.age += dt
         self.lifetime -= dt
         if self.lifetime <= 0 or (room is not None and room.blocked(self.rect)):
             self.alive = False
 
-    def draw(self, surface):
+    def draw(self, surface, level=None):
+        """level = номер уровня 1..3: пуля-картинка fx_bullet_l<уровень>_<player|boss>_<кадр>, иначе кружок."""
         import pygame
+        if level is not None:
+            from src.systems import assets
+            who = "player" if self.owner == "player" else "boss"
+            key = f"fx_bullet_l{level}_{who}_{int(self.age * 8) % 2 + 1}"
+            if key in assets._load_manifest():
+                surface.blit(assets.get_image(key, (32, 16)), (self.x - 16, self.y - 8))
+                return
         color = (255, 230, 90) if self.owner == "player" else (255, 90, 90)
         pygame.draw.circle(surface, color, (int(self.x), int(self.y)), self.radius)

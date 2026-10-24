@@ -7,7 +7,7 @@ DIRS = ["e", "se", "s", "sw", "w", "nw", "n", "ne"]
 FRAME_COUNT = {"idle": 2, "walk": 4, "shoot": 2, "walkshoot": 4}
 FRAME_RATE = {"idle": 2, "walk": 8, "walkshoot": 8}
 SHOT_FLASH_TIME = 0.1
-DRAW_SIZE = 48              # размер картинки героя на экране (хитбокс SIZE не меняется)
+DRAW_SIZE = 48              # размер картинки героя на экране (как у врагов)
 FEET = 31 / 32              # низ ног в кадре (доля высоты картинки)
 # Кончик пальца относительно центра картинки при размере 20 px (docs/ART_LOG.md, раздел 3.3); масштабируется под DRAW_SIZE.
 MUZZLE_BASE = 20
@@ -21,7 +21,7 @@ def dir8(dx, dy):
 
 
 class Player:
-    SIZE = 20
+    SIZE = 24
     SHOT_COOLDOWN = 0.40
     SHOT_SPEED = 520
     SHOT_DAMAGE = 1
@@ -99,8 +99,11 @@ class Player:
         if shooting and self.cooldown == 0.0:
             self.cooldown = self.SHOT_COOLDOWN
             self.shot_flash = SHOT_FLASH_TIME
-            ux, uy = self.aim
             sx, sy = self.muzzle_point()
+            # летим из кончика пальца ровно в точку прицела, иначе пуля идёт параллельно и мажет
+            dx, dy = aim_point[0] - sx, aim_point[1] - sy
+            dist = math.hypot(dx, dy)
+            ux, uy = (dx / dist, dy / dist) if dist > 1 else self.aim
             shots.append(Projectile(sx, sy,
                                     ux * self.SHOT_SPEED, uy * self.SHOT_SPEED,
                                     damage=self.SHOT_DAMAGE, owner="player",
