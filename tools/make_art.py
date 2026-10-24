@@ -188,13 +188,13 @@ def finish(img):
     return img.resize((HW * 2, HH * 2), Image.NEAREST)
 
 
-def floor_boards(d, x0, y0, x1, y1):
+def floor_boards(d, x0, y0, x1, y1, ca="floor_a", cb="floor_b"):
     """Дощатый пол: доски по 5 px поперёк комнаты, стыки вразбежку, мало контраста."""
-    rect(d, x0, y0, x1 - 1, y1 - 1, "floor_a")
+    rect(d, x0, y0, x1 - 1, y1 - 1, ca)
     for i, y in enumerate(range(y0, y1, 5)):
-        rect(d, x0, y + 4, x1 - 1, y + 4, "floor_b")
+        rect(d, x0, y + 4, x1 - 1, y + 4, cb)
         for x in range(x0 + (i * 17) % 45, x1, 45):
-            rect(d, x, y, x, y + 3, "floor_b")
+            rect(d, x, y, x, y + 3, cb)
 
 
 def wall_bricks(d, x0, y0, x1, y1):
@@ -491,47 +491,50 @@ HP_MAX = 5  # settings.PLAYER_MAX_HEALTH
 HP_W, HP_H = 320, 44  # холст с запасом под тряску
 HP_X, HP_Y = 10, 7  # где на холсте лежит сама шкала 300x30
 
-# лицо 13x13, рисуется в половинном разрешении; F — заливка лица, f — тень
-FACE = [
-    "....KKKKK....",
-    "..KKFFFFFKK..",
-    ".KFFFFFFFFFK.",
-    ".KFFFFFFFFFK.",
-    "KFFFFFFFFFFFK",
-    "KFFFFFFFFFFFK",
-    "KFFFFFFFFFFFK",
-    "KFFFFFFFFFFFK",
-    "KFFFFFFFFFFFK",
-    ".KFFFFFFFFfK.",
-    ".KfFFFFFFffK.",
-    "..KKfffffKK..",
-    "....KKKKK....",
+# зачётка слева от шкалы: красная обложка с белой этикеткой, на этикетке оценка. 5 жизней = 5 делений,
+# оценка от 10 до 0 с шагом 2: жизни 5/4/3/2/1/0 -> 10/8/6/4/2/0. Сетка 11x13 (контур добавляет stamp)
+GRADE = {5: "10", 4: "8", 3: "6", 2: "4", 1: "2", 0: "0"}
+GRADE_COLOR = {5: "bar_green_dark", 4: "bar_green_dark", 3: "bar_yellow_dark", 2: "bar_orange_dark",
+               1: "bar_red_dark", 0: "bar_red_dark"}
+BOOK = [  # раскрытая зачётка сверху: красная обложка по краю, две страницы, корешок посередине, срез страниц внизу
+    "RRRRRRRRRRRRR",
+    "RWWWWsWWWWWWR",
+    "RWWWWsWWWWWWR",
+    "RWWWWsWWWWWWR",
+    "RWWWWsWWWWWWR",
+    "RWWWWsWWWWWWR",
+    "RWWWWsWWWWWWR",
+    "RWWWWsWWWWWWR",
+    "RWWWWsWWWWWWR",
+    "RWWWWsWWWWWWR",
+    "RWWWWsWWWWWWR",
+    "RttttsttttttR",
+    "RRRRRRRRRRRRR",
 ]
-EYES = [(4, 4), (4, 5), (8, 4), (8, 5)]
-FEATURES = {  # (x, y, символ): K — контур, M — рот, W — белок, B — капля пота
-    "5": EYES + [(3, 7), (9, 7)] + [(x, 8) for x in range(4, 9)] + [(5, 9, "M"), (6, 9, "M"), (7, 9, "M")],
-    "4": EYES + [(4, 7), (8, 7)] + [(x, 8) for x in range(5, 8)],
-    "3": EYES + [(x, 8) for x in range(5, 8)],
-    "2": [(4, 5), (4, 6), (8, 5), (8, 6), (3, 3), (9, 3)] + [(x, 8) for x in range(5, 8)] + [(4, 9), (8, 9)],
-    "1": [(3, 4, "W"), (4, 4, "W"), (3, 5, "W"), (4, 5), (8, 4, "W"), (9, 4, "W"), (8, 5), (9, 5, "W"),
-          (4, 9), (5, 8), (6, 9), (7, 8), (8, 9), (10, 2, "B"), (10, 3, "B"), (11, 3, "B")],
-    "0": [(3, 4), (5, 4), (4, 5), (3, 6), (5, 6), (7, 4), (9, 4), (8, 5), (7, 6), (9, 6)]
-         + [(x, 9) for x in range(4, 9)],
-    "hit": [(3, 4), (4, 5), (3, 6), (9, 4), (8, 5), (9, 6), (5, 8), (6, 8), (7, 8), (5, 9), (6, 9, "M"),
-            (7, 9), (5, 10), (6, 10), (7, 10)],
-}
+DIGIT = {"0": ["###", "#.#", "#.#", "#.#", "###"], "1": ["#", "#", "#", "#", "#"], "2": ["##.", "..#", ".#.", "#..", "###"],
+         "4": ["#.#", "#.#", "###", "..#", "..#"], "6": [".##", "#..", "###", "#.#", "###"],
+         "8": ["###", "#.#", "###", "#.#", "###"]}  # узкая единица, чтобы «10» влезло на правую страницу (6 px)
 
 
-def hp_face(img, n, hit=False):
-    """Лицо слева от шкалы. n = текущее здоровье 0..5, hit = кадр попадания."""
-    face = "hit_face" if hit else ("pack" if n > 0 else "face_dead")
-    shade = "hit_red_light" if hit else ("pack_dark" if n > 0 else "shadow_ground")
-    stamp(img, FACE, 1, 1, {"F": face, "f": shade}, line=False)
+def hp_book(img, n, hit=False):
+    """Раскрытая зачётка слева от шкалы: на левой странице строчки, на правой оценка.
+    n = текущее здоровье 0..5, hit = кадр попадания (обложка светлеет)."""
+    cover = "hit_red_light" if hit else ("book" if n > 0 else "face_dead")
+    stamp(img, BOOK, 1, 1, {"R": cover, "s": "step_b", "W": "paper", "t": "step_b"})
     px = img.load()
-    cols = {"K": "outline", "M": "mouth", "W": "paper", "B": "screen"}
-    for f in FEATURES["hit" if hit else str(n)]:
-        x, y, ch = f if len(f) == 3 else f + ("K",)
-        px[1 + x, 1 + y] = P[cols[ch]] + (255,)
+    for y, x1 in ((3, 5), (5, 4), (7, 5), (9, 3)):  # записи на левой странице
+        for x in range(2, x1 + 1):
+            px[x, y] = P["step_b"] + (255,)
+    for x in range(8, 12):  # подпись на правой странице
+        px[x, 10] = P["step_b"] + (255,)
+    grade = GRADE[n]
+    x = 7 if len(grade) == 2 else 8  # правая страница шире левой: x 7..12
+    for ch in grade:
+        for j, row in enumerate(DIGIT[ch]):
+            for i, c in enumerate(row):
+                if c == "#":
+                    px[x + i, 4 + j] = P[GRADE_COLOR[n]] + (255,)
+        x += len(DIGIT[ch][0]) + 1
 
 
 def hp_color(n):
@@ -557,7 +560,7 @@ def hp_bar(n, frac=None, hit=False, dx=0, dy=0, flash=False):
     for i in range(1, HP_MAX):  # деления: одна жизнь = одна секция
         sx = x0 + 1 + (inner + 1) * i // HP_MAX
         rect(d, sx, y0 + 1, sx, y1 - 1, "outline")
-    hp_face(layer, n, hit)
+    hp_book(layer, n, hit)
     layer = layer.resize((300, 30), Image.NEAREST)
     out = Image.new("RGBA", (HP_W, HP_H), (0, 0, 0, 0))
     out.paste(layer, (HP_X + dx, HP_Y + dy), layer)
@@ -885,7 +888,7 @@ ATK_STRIKE = (0, 0, 1, 1, 0)
 LUNGE = {"windup": -1, "strike": 2}  # сдвиг верхней части тела вдоль направления удара, px
 
 
-def character(name, dname, ph, shoot=None, atk=None):
+def character(name, dname, ph, shoot=None, atk=None, beak=False):
     """Кадр персонажа. shoot: None, "aim" (рука вытянута) или "recoil" (отдача).
     atk (ближний бой): None, "windup" (замах: рука отведена, корпус назад) или "strike" (удар: выпад
     вперёд, рука вытянута, дуга удара)."""
@@ -972,7 +975,7 @@ def character(name, dname, ph, shoot=None, atk=None):
     arms("front")
     gun("front")
     gun("under_head")
-    head = HEADS[c["head"]][base]
+    head = HEADS[c["head_open"] if beak and c.get("head_open") else c["head"]][base]
     put_m(head, 8 if side else 7, 5 - max(0, len(head) - 15))  # лишние строки сверху: плюмаж, пучок, антенна
     gun("top")
     if atk == "strike" and c.get("slash"):
@@ -1204,6 +1207,7 @@ PALETTE.update({
     "dark_wall": (50, 40, 66), "dark_wall2": (62, 50, 80),
     "purple": (122, 72, 162), "purple_dark": (82, 46, 112), "purple_light": (166, 116, 204),
     "exam_red": (200, 48, 60),
+    "lvov_floor_a": (150, 128, 98), "lvov_floor_b": (138, 118, 90),
 })
 P = PALETTE
 
@@ -1694,7 +1698,8 @@ def bg_level3_boss():
     """Львовка, зал босса: экзаменационный зал. Длинный стол комиссии вверху (без людей: бланки, таймер,
     печать), красная дорожка к арене, ряды парт с бланками и красными отметками, табло. Центр свободен.
     Вход снизу (клетки 15-16), выход сверху (клетки 26-27)."""
-    img, d = shell("dark_wall", "dark_wall2", lambda dd: tiles(dd, HT, HT, HW - HT, HH - HT, "dark_a", "dark_b", 15), hi="purple")
+    img, d = shell("wall_dark", "outline", lambda dd: floor_boards(dd, HT, HT, HW - HT, HH - HT, "lvov_floor_a", "lvov_floor_b"),
+                   hi="hse_blue_dark")
     for r in (78, 74):  # красное кольцо арены (проходимое)
         for a in range(0, 360, 2):
             d.point((int(240 + r * math.cos(math.radians(a))), int(135 + r * 0.8 * math.sin(math.radians(a)))), fill=P["exam_red"])
@@ -1702,7 +1707,7 @@ def bg_level3_boss():
     rect(d, x0, y0, x1, y1, "exam_red")
     rect(d, x0 + 2, y0 + 2, x1 - 2, y1, "enemy_red_dark")
     rect(d, x0 + 4, y0 + 4, x1 - 4, y1, "exam_red")
-    dots(d, 90, 13, ["dark_wall2", "step_b"])
+    dots(d, 90, 13, ["shadow", "step_b"])
     for sx, sy in ((120, 110), (350, 100), (150, 185), (330, 175), (90, 150), (390, 150)):  # бланки на полу
         rect(d, sx, sy, sx + 7, sy + 9, "paper")
         rect(d, sx + 1, sy + 2, sx + 5, sy + 2, "step_b")
@@ -1710,7 +1715,7 @@ def bg_level3_boss():
     lay = new_layer()
     ld = ImageDraw.Draw(lay)
     rect(ld, 160, 1, 380, 13, "board_frame")  # красное табло с формулами
-    rect(ld, 162, 2, 378, 11, "dark_wall")
+    rect(ld, 162, 2, 378, 11, "outline")
     text(ld, 170, 4, "S", "exam_red")
     text(ld, 186, 4, "[a,b]", "exam_red")
     text(ld, 224, 4, "A^B", "exam_red")
@@ -1744,7 +1749,7 @@ def bg_level3_boss():
     disc(ld, x0 + 7, y0 + 5, 6, "leaf_dark")
     disc(ld, x0 + 6, y0 + 4, 4, "leaf")
     lay_on(img, lay)
-    put_door(img, d, 26, "purple_dark")
+    put_door(img, d, 26, "hse_blue_dark")
     return finish(img)
 
 
@@ -1961,7 +1966,7 @@ def _int_head(v, g):
 
 
 # ---- Ворон ВШЭ (маскот): серый, светлый и тёмный бок, огромный жёлто-оранжевый клюв, круглые глаза, чёрный хохолок
-def _bird_head(v, g):
+def _bird_head(v, g, open_=False):
     g = [r.ljust(21, ".").replace("S", "H").replace("s", "d") for r in g]  # лицо того же серого, что голова
     g = [("".join("d" if (ch in "Hh" and i >= 13) else ch for i, ch in enumerate(r[:18])) + r[18:]) if v != "e"
          else ("".join("d" if (ch in "Hh" and i <= 2) else ch for i, ch in enumerate(r[:16])) + r[16:]) for r in g]  # тёмный бок
@@ -1986,6 +1991,8 @@ def _bird_head(v, g):
             pts[(x0 - 1 if i == 0 else x0 + 4, 3)] = "K"
         dx = 0 if v == "s" else 3
         rows = ((9, 4, 14, "B"), (10, 5, 13, "B"), (11, 6, 12, "B"), (12, 7, 11, "b"), (13, 8, 10, "b"))  # клюв-треугольник
+        if open_:  # клюв открыт: верхняя часть выше, нижняя ниже, между ними тёмный зев
+            rows = ((9, 4, 14, "B"), (10, 5, 13, "B"), (11, 6, 12, "K"), (12, 6, 12, "b"), (13, 7, 11, "b"), (14, 8, 10, "b"))
         for y, x0, x1, ch in rows:
             for x in range(x0 + dx, x1 + dx):
                 pts[(x, y)] = ch
@@ -2003,11 +2010,17 @@ def _bird_head(v, g):
         for x in range(9, 13):
             pts[(x, 4)] = "K"
         pts[(8, 3)] = "K"
-        for y, x0, x1, ch in ((8, 13, 16, "B"), (9, 13, 18, "B"), (10, 13, 21, "B"), (11, 13, 20, "b"), (12, 13, 17, "b")):
+        beak_e = ((8, 13, 16, "B"), (9, 13, 18, "B"), (10, 13, 21, "B"), (11, 13, 20, "b"), (12, 13, 17, "b"))
+        if open_:
+            beak_e = ((7, 13, 16, "B"), (8, 13, 21, "B"), (9, 13, 20, "K"), (10, 13, 19, "K"), (11, 13, 18, "b"), (12, 13, 20, "b"), (13, 14, 17, "b"))
+        for y, x0, x1, ch in beak_e:
             for x in range(x0, x1):
                 pts[(x, y)] = ch
     elif v == "ne":
-        for y, x0, x1, ch in ((9, 17, 20, "B"), (10, 17, 20, "B"), (11, 17, 19, "b")):
+        beak_ne = ((9, 17, 20, "B"), (10, 17, 20, "B"), (11, 17, 19, "b"))
+        if open_:
+            beak_ne = ((8, 17, 20, "B"), (9, 17, 20, "K"), (10, 17, 19, "b"), (11, 17, 19, "b"))
+        for y, x0, x1, ch in beak_ne:
             for x in range(x0, x1):
                 pts[(x, y)] = ch
     g = _set(g, pts)
@@ -2038,7 +2051,7 @@ def _teacher_head(v, g):
 
 HEADS.update({
     "guard": _heads(_guard_head), "bin": _heads(_bin_head), "integral": _heads(_int_head),
-    "bird": _heads(_bird_head), "server": _heads(_srv_head), "teacher": _heads(_teacher_head),
+    "bird": _heads(_bird_head), "bird_open": _heads(lambda v, g: _bird_head(v, g, True)), "server": _heads(_srv_head), "teacher": _heads(_teacher_head),
 })
 TORSOS.update({
     "bin": {"s": _digits("010"), "se": _digits("010", 1), "ne": _digits("101", 1), "n": _digits("101"),
@@ -2085,8 +2098,8 @@ CHARS.update({
                                      "S": "enemy_orange_light", "s": "enemy_orange", "T": "enemy_orange",
                                      "t": "enemy_orange_dark", "P": "enemy_orange_dark", "p": "outline",
                                      "O": "enemy_red_dark", "r": "enemy_red", "F": "paper"}),
-    "enemy_hse_bird": dict(scale=1, dy=1, head="bird", torso="bird", item="none", gun=None, pack=False,
-                           melee=True, slash=10, legs=THIN_LEGS, legs_x=(12, 17), legs_line=False,
+    "enemy_hse_bird": dict(scale=1, dy=1, head="bird", head_open="bird_open", torso="bird", item="none", gun=None,
+                           pack=False, legs=THIN_LEGS, legs_x=(12, 17), legs_line=False,
                            pal={"H": "raven_grey", "h": "raven_grey_light", "d": "raven_grey_dark",
                                 "T": "raven_grey", "t": "raven_grey_dark", "S": "raven_grey_dark",
                                 "P": "outline", "p": "outline", "O": "outline", "B": "beak_yellow", "b": "beak_dark"}),
@@ -2099,6 +2112,18 @@ CHARS.update({
                              "K": "hit_red", "M": "hit_red", "R": "hit_red", "p": "purple_dark", "T": "purple_dark",
                              "t": "dark_wall", "P": "purple_dark", "O": "brick_dark", "F": "led_amber"}),
 })
+
+
+def save_bird(name):
+    """Стреляющий клювом (ворон ВШЭ): покой 2, ходьба 4, выстрел 2 (1 — клюв открыт, 2 — закрыт) на 8 направлений."""
+    for dr in DIRS:
+        for k, ph in enumerate(IDLE, 1):
+            save(character(name, dr, ph), "%s_idle_%s_%d" % (name, dr, k))
+        for k, ph in enumerate(WALK, 1):
+            save(character(name, dr, ph), "%s_walk_%s_%d" % (name, dr, k))
+        save(character(name, dr, STAND, beak=True), "%s_shoot_%s_1" % (name, dr))
+        save(character(name, dr, STAND), "%s_shoot_%s_2" % (name, dr))
+    save(character(name, "s", IDLE[0]), name)  # запасной кадр: смотрит вниз
 
 
 def save_creature(name):
@@ -2117,7 +2142,457 @@ def save_creature(name):
     save(character(name, "s", IDLE[0]), name)  # запасной кадр: смотрит вниз
 
 
-SIZES = {"bg_": (960, 540), "boss_": (64, 64), "ui_": (320, 44)}  # остальное 32x32
+# ---------------------------------------------------------------- лечилка: стакан кофе с крышкой
+def _heal_grid():
+    """Бумажный стакан кофе на вынос: тёмная крышка с отверстием, суживающийся белый корпус,
+    коричневый ободок с кофейным зерном. Вид в три четверти, ширина 16, строка = один пиксель."""
+    rows = []
+    def add(width, fill, edge_l="", edge_r=""):
+        body = fill * (width - len(edge_l) - len(edge_r))
+        rows.append((edge_l + body + edge_r).center(16, "."))
+    add(8, "L")                                   # крышка: верхний овал
+    rows.append("LLLLLLLLLLLL".center(16, "."))
+    rows.append("LLLLLLLLKDDLLL"[:14].center(16, "."))  # отверстие для питья
+    rows.append("lllllllllllllll".ljust(16, "l")[:16])  # край крышки
+    rows.append("LLLLLLLLLLLLLL".center(16, "."))      # тень под краем
+    for i in range(14):                           # корпус: от 14 до 10 пикселей
+        w = 14 - (i * 4) // 13
+        if 3 <= i <= 8:                           # коричневый ободок
+            rows.append(("o" + "S" * (w - 3) + "qq").center(16, "."))
+        else:
+            rows.append(("W" + "W" * (w - 3) + "ss").center(16, "."))
+    # зерно на ободке: два овала со светлой чёрточкой
+    bean = [(7, 9), (8, 9), (6, 10), (7, 10), (8, 10), (9, 10), (6, 11), (7, 11), (8, 11), (9, 11), (7, 12), (8, 12)]
+    grid = [list(r) for r in rows]
+    for x, y in bean:
+        grid[y][x + 1] = "q"
+    for x, y in ((8, 10), (8, 11)):
+        grid[y][x + 1] = "o"
+    return ["".join(r) for r in grid]
+
+
+HEAL_PAL = {"L": "wall_dark", "l": "wall_light", "D": "door_glass", "W": "paper", "s": "step_b", "S": "wood",
+            "q": "wood_dark", "o": "wood_light"}
+
+
+def fx_heal():
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    stamp(img, SHADOW, 9, 28, {}, line=False)
+    stamp(img, _heal_grid(), 8, 9, HEAL_PAL)
+    for x, y in ((14, 7), (15, 6), (14, 5), (15, 4), (16, 3), (19, 6), (20, 5), (19, 4), (20, 3)):  # пар над крышкой
+        img.putpixel((x, y), P["paper"] + (255,))
+    return img
+
+
+HEAL_STEAM = ((14, 7), (15, 6), (14, 5), (15, 4), (16, 3), (19, 6), (20, 5), (19, 4), (20, 3))
+
+
+def _cup_3d(rot):
+    """Объёмный стакан: конус с поверхностью, повёрнутой на rot рад. Свет слева, тень справа,
+    логотип-зерно и шов на рукаве реально уезжают за край, крышка с отверстием вращается вместе с ним."""
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    px = img.load()
+    cx = 16
+    def wrap(a):
+        return (a + math.pi) % (2 * math.pi) - math.pi
+    def side(y, r, light, mid, dark, tex=None):
+        for x in range(cx - r, cx + r):
+            t = (x + 0.5 - cx) / r  # -1 слева .. 1 справа
+            phi = math.asin(max(-1, min(1, t))) + rot
+            col = light if t < -0.45 else dark if t > 0.5 else mid
+            if tex:
+                col = tex(x, y, t, phi, col)
+            px[x, y] = col + (255,)
+    lid, lid_l, lid_d = P["wall_dark"], P["wall_light"], P["outline"]
+    # верх крышки: овал с отверстием, которое ходит по кругу
+    for y in range(9, 14):
+        for x in range(cx - 7, cx + 7):
+            ex, ey = (x + 0.5 - cx) / 7, (y - 11) / 2.4
+            if ex * ex + ey * ey <= 1:
+                px[x, y] = lid_l + (255,) if ey < 0.2 else lid + (255,)
+    hx, hy = cx + round(3.5 * math.cos(rot + 0.6)), 11 + round(1.1 * math.sin(rot + 0.6))
+    for dx in (-1, 0):
+        if 0 <= hx + dx < 32:
+            px[hx + dx, hy] = lid_d + (255,)
+    for y, r in ((13, 8), (14, 8)):  # борт крышки
+        side(y, r, lid_l, lid, lid_d)
+    side(15, 7, lid, lid, lid_d)
+    wh, sh = P["paper"], P["step_b"]
+    def sleeve(x, y, t, phi, col):
+        if not 18 <= y <= 23:
+            return col
+        base = (P["wood_light"], P["wood"], P["wood_dark"])[0 if t < -0.45 else 2 if t > 0.5 else 1]
+        d = abs(wrap(phi))
+        if t > -1 and math.cos(phi) > 0.05 and d < 0.42 and 19 <= y <= 22:  # зерно-логотип
+            if (y in (20, 21)) and d < 0.1:
+                return P["wood_light"]
+            return P["wood_dark"]
+        if abs(wrap(phi - math.pi)) < 0.14:  # шов
+            return P["wood_dark"]
+        return base
+    for y in range(16, 28):
+        r = 7 - ((y - 16) * 2) // 11
+        if y == 27:
+            r -= 1
+        side(y, r, wh, wh, sh, tex=sleeve)
+    return img
+
+
+def fx_heal_float(frame):
+    """Кадр 1..8 парящего стакана: покачивание вверх-вниз (0..2 px) и вращение вокруг вертикальной оси
+    (настоящее, с поворотом поверхности и светом). Цикл 8 кадров, тень остаётся на земле."""
+    i = frame - 1
+    bob = -round(1 + math.sin(2 * math.pi * i / 8))
+    cup = _cup_3d(2 * math.pi * i / 8)
+    outline(cup, P["outline"])
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    stamp(img, SHADOW, 9, 28, {}, line=False)
+    img.alpha_composite(cup, (0, bob))
+    for x, y in HEAL_STEAM:  # пар колышется
+        img.putpixel((x + (i % 2 if y % 2 else 0), y + bob), P["paper"] + (255,))
+    return img
+
+
+PLAYER_DIRS = ("s", "se", "e", "ne", "n", "nw", "w", "sw")
+
+
+def brown_tint(src):
+    """Коричневая заливка кадра (контур остаётся тёмным), для мигания при подборе кофе."""
+    src = src.convert("RGBA")
+    px = src.load()
+    ramp = (P["wood_dark"], P["wood"], P["wood_light"])
+    for y in range(src.height):
+        for x in range(src.width):
+            r, g, b, a = px[x, y]
+            if a != 255 or (r, g, b) == P["outline"]:
+                continue
+            lum = 0.3 * r + 0.59 * g + 0.11 * b
+            px[x, y] = ramp[0 if lum < 90 else 1 if lum < 160 else 2] + (255,)
+    return src
+
+
+def player_heal(d, frame):
+    """Подбор кофе стоя: кадры 1 и 3 коричневые, 2 и 4 обычные."""
+    src = Image.open(os.path.join(OUT, "player_idle_%s_1.png" % d))
+    return src.convert("RGBA") if frame % 2 == 0 else brown_tint(src)
+
+
+PLAYER_ANIMS = (("idle", 2), ("walk", 4), ("shoot", 2), ("walkshoot", 4))
+
+
+def save_heal_anim():
+    for f in range(1, 9):
+        save(fx_heal_float(f), "fx_heal_float_%d" % f)
+    for d in PLAYER_DIRS:
+        for f in range(1, 5):
+            save(player_heal(d, f), "player_heal_%s_%d" % (d, f))
+    for anim, n in PLAYER_ANIMS:  # коричневая копия каждого кадра героя: для мигания при подборе в любом действии
+        for d in PLAYER_DIRS:
+            for f in range(1, n + 1):
+                src = Image.open(os.path.join(OUT, "player_%s_%s_%d.png" % (anim, d, f)))
+                save(brown_tint(src), "player_brown_%s_%s_%d" % (anim, d, f))
+
+
+# ---------------------------------------------------------------- четвёртые комнаты уровней (тревожнее обычных)
+# Порядок на уровне: двор -> комната уровня -> эта комната (больше деталей, ближе экзамен) -> зал босса.
+def _plywood(ld, cx, cy, cw, ch):
+    """Фанерная перегородка из листов со швами и красной лентой."""
+    x0, y0, x1, y1 = cell(cx, cy, cw, ch)
+    rect(ld, x0 + 3, y0 + 1, x1 - 3, y1 - 1, "wood_light")
+    for y in range(y0 + 8, y1 - 2, 12):
+        rect(ld, x0 + 3, y, x1 - 3, y, "wood")
+    rect(ld, x0 + 3, y0 + 1, x0 + 4, y1 - 1, "wood")
+    rect(ld, x0 + 3, (y0 + y1) // 2, x1 - 3, (y0 + y1) // 2 + 1, "exam_red")
+
+
+def _scaffold(ld, cx, cy, cw, ch):
+    x0, y0, x1, y1 = cell(cx, cy, cw, ch)
+    for x in (x0 + 2, x1 - 3):
+        rect(ld, x, y0, x + 1, y1, "enemy_orange_dark")
+    for y in range(y0 + 2, y1, 14):
+        rect(ld, x0 + 1, y, x1 - 1, y + 1, "wood")
+        rect(ld, x0 + 1, y + 2, x1 - 1, y + 2, "wood_dark")
+
+
+def _mixer(ld, cx, cy, cw, ch):
+    x0, y0, x1, y1 = cell(cx, cy, cw, ch)
+    mx, my = x0 + 22, y0 + 15
+    disc(ld, mx, my, 13, "base_dark")
+    disc(ld, mx, my, 10, "hse_blue")
+    disc(ld, mx, my, 4, "step_a")
+    rect(ld, x0 + 2, y0 + 26, x0 + 10, y0 + 29, "wood_dark")
+
+
+def _barrier(ld, cx, cy, cw):
+    x0, y0, x1, y1 = cell(cx, cy, cw, 1)
+    rect(ld, x0 + 1, y0 + 4, x1 - 1, y0 + 10, "paper")
+    for x in range(x0 + 1, x1 - 6, 10):
+        rect(ld, x, y0 + 4, x + 4, y0 + 10, "exam_red")
+    rect(ld, x0 + 3, y0 + 10, x0 + 5, y1 - 1, "base_dark")
+    rect(ld, x1 - 5, y0 + 10, x1 - 3, y1 - 1, "base_dark")
+
+
+Y2_WALLS = [[6, 5, 1, 5], [25, 8, 1, 5], [1, 3, 2, 3], [29, 3, 2, 3], [11, 12, 3, 2], [18, 11, 4, 2], [3, 13, 2, 1],
+            [1, 9, 3, 2], [20, 5, 3, 1], [9, 4, 3, 1], [14, 1, 4, 1]]
+
+
+def bg_level1_yard2():
+    """Печерка, вторая комната: ремонт в разгаре. Фанерные перегородки, леса, бетономешалка, поддоны с досками,
+    краска, парты под плёнкой, красно-белые барьеры, доска закрыта плёнкой, красная лента на полу.
+    Вход снизу (клетки 15-16), выход сверху (клетки 26-27)."""
+    img, d = shell("wall_dark", "outline", lambda dd: tiles(dd, HT, HT, HW - HT, HH - HT, "concrete_a", "concrete_b", 15),
+                   hi="enemy_orange")
+    repair_walls(d)
+    for x0, y0, x1, y1 in ((60, 0, 130, 13), (300, 0, 380, 13)):  # проломы в верхней стене
+        rect(d, x0, y0, x1, y1, "brick_dark")
+        for k in range(x0 + 3, x1, 9):
+            d.point((k, y0 + 5), fill=P["outline"])
+    dots(d, 220, 13, ["step_b", "sand_dark", "wall_dark"])
+    for y in range(60, 200, 8):  # красная лента через комнату (проходимая)
+        rect(d, 200, y, 203, y + 3, "exam_red" if (y // 8) % 2 else "paper")
+    for pts in (((50, 70), (70, 90), (66, 110)), ((420, 150), (400, 172), (408, 196)), ((250, 200), (262, 214), (256, 232))):
+        d.line(pts, fill=P["wall_dark"], width=1)  # трещины в бетоне
+    lay = new_layer()
+    ld = ImageDraw.Draw(lay)
+    chalkboard(ld, 160, 1, 380, [(8, 3, "Hello"), (50, 3, "a/an"), (88, 3, "I am"), (130, 3, "-ed")])
+    rect(ld, 270, 2, 378, 12, "screen")  # плёнка поверх половины доски
+    for x in range(278, 378, 14):
+        rect(ld, x, 2, x + 1, 12, "glass")
+    x0, y0, x1, y1 = cell(14, 1, 4, 1)  # стол под доской: каска, бумаги, красная папка
+    rect(ld, x0 + 1, y0 + 2, x1 - 1, y1 - 1, "wood")
+    rect(ld, x0 + 1, y0 + 2, x1 - 1, y0 + 3, "wood_light")
+    rect(ld, x0 + 1, y1 - 2, x1 - 1, y1 - 1, "wood_dark")
+    disc(ld, x0 + 14, y0 + 8, 4, "pack")
+    rect(ld, x0 + 10, y0 + 8, x0 + 18, y0 + 9, "pack_dark")
+    rect(ld, x0 + 32, y0 + 5, x0 + 50, y0 + 11, "paper")
+    rect(ld, x0 + 3, y0 + 5, x0 + 7, y0 + 11, "exam_red")
+    _plywood(ld, 6, 5, 1, 5)
+    _plywood(ld, 25, 8, 1, 5)
+    _scaffold(ld, 1, 3, 2, 3)
+    _scaffold(ld, 29, 3, 2, 3)
+    _mixer(ld, 11, 12, 3, 2)
+    x0, y0, x1, y1 = cell(18, 11, 4, 2)  # поддоны с досками
+    for k, by in enumerate((y0 + 22, y0 + 12, y0 + 2)):
+        rect(ld, x0 + 2, by, x1 - 2, by + 8, "wood" if k % 2 else "wood_light")
+        rect(ld, x0 + 2, by + 7, x1 - 2, by + 8, "wood_dark")
+    for cx in (3, 4):  # банки с краской
+        x0, y0, x1, y1 = cell(cx, 13)
+        disc(ld, (x0 + x1) // 2, (y0 + y1) // 2, 6, "step_b")
+        disc(ld, (x0 + x1) // 2, (y0 + y1) // 2, 4, "enemy_orange" if cx == 3 else "exam_red")
+    x0, y0, x1, y1 = cell(1, 9, 3, 2)  # парты под плёнкой
+    rect(ld, x0 + 1, y0 + 2, x1 - 1, y1 - 2, "screen")
+    for k in range(7, x1 - x0 - 3, 13):
+        rect(ld, x0 + k, y0 + 2, x0 + k + 1, y1 - 2, "glass")
+    rect(ld, x0 + 4, y1 - 1, x0 + 6, y1, "wood_dark")
+    rect(ld, x1 - 6, y1 - 1, x1 - 4, y1, "wood_dark")
+    _barrier(ld, 20, 5, 3)
+    _barrier(ld, 9, 4, 3)
+    lay_on(img, lay)
+    put_door(img, d, 26, "enemy_orange_dark")
+    return finish(img)
+
+
+# ---------- Родионова: сломавшийся компьютерный класс
+L2B_DESKS = [(8, 6), (8, 10), (20, 6), (20, 10)]
+L2B_WALLS = ([[1, 3, 2, 3], [1, 7, 2, 3], [1, 11, 2, 3], [29, 3, 2, 3], [14, 1, 4, 1]]
+             + [w for x, y in L2B_DESKS for w in ([x, y, 4, 1], [x + 1, y + 1, 2, 1])])
+
+
+def pc_desk_err(ld, cx, cy):
+    """Компьютерная парта с экранами в красных ошибках."""
+    x0, y0, x1, y1 = cell(cx, cy, 4, 1)
+    rect(ld, x0 + 20, y1 + 2, x1 - 20, y1 + 10, "wall")
+    rect(ld, x0 + 20, y1 + 9, x1 - 20, y1 + 10, "wall_dark")
+    rect(ld, x0 + 1, y0 + 2, x1 - 1, y1 - 1, "tech_b")
+    rect(ld, x0 + 1, y0 + 2, x1 - 1, y0 + 3, "paper")
+    rect(ld, x0 + 1, y1 - 2, x1 - 1, y1 - 1, "base_dark")
+    for k in range(2):
+        mx = x0 + 6 + k * 26
+        rect(ld, mx, y0 + 3, mx + 17, y0 + 9, "monitor")
+        rect(ld, mx + 1, y0 + 4, mx + 16, y0 + 7, "exam_red")
+        rect(ld, mx + 3, y0 + 5, mx + 12, y0 + 5, "paper")
+        rect(ld, mx + 4, y0 + 10, mx + 13, y0 + 10, "paper")
+
+
+def bg_level2_class2():
+    """Родионова, вторая комната: сломавшийся класс. Стойки вдоль стен, парты с красными ошибками,
+    провода по всему полу, красная полоса у выхода, экраны ERROR на стене.
+    Вход снизу (клетки 15-16), выход сверху (клетки 26-27)."""
+    img, d = shell("dark_wall2", "dark_wall", lambda dd: tiles(dd, HT, HT, HW - HT, HH - HT, "tech_b", "tech_a", 15))
+    for pts, col in ((((60, 60), (60, 120), (130, 120), (130, 180), (200, 180)), "exam_red"),
+                     (((60, 100), (100, 100), (100, 200), (160, 200)), "monitor"),
+                     (((420, 60), (420, 130), (350, 130), (350, 200)), "led_amber"),
+                     (((300, 70), (300, 120), (250, 120), (250, 170), (210, 170)), "purple_dark"),
+                     (((60, 190), (90, 190), (90, 230), (180, 230)), "exam_red"),
+                     (((440, 100), (390, 100), (390, 215)), "monitor")):
+        cable(d, pts, col)
+    for y in range(18, 34, 4):  # предупреждающая полоса перед выходом
+        for x in range(390, 420, 8):
+            rect(d, x, y, x + 3, y + 1, "pack")
+    for px, py in ((140, 150), (310, 160), (260, 60), (380, 190)):  # осколки, бумага
+        rect(d, px, py, px + 3, py + 2, "paper")
+    dots(d, 120, 17, ["paper", "step_b", "exam_red"])
+    lay = new_layer()
+    ld = ImageDraw.Draw(lay)
+    for x0 in (170, 255, 340):  # мониторы на стене, на каждом ERROR
+        rect(ld, x0, 2, x0 + 40, 12, "monitor")
+        rect(ld, x0 + 2, 3, x0 + 38, 11, "outline")
+        text(ld, x0 + 11, 5, "ERROR", "hit_red")
+    x0, y0, x1, y1 = cell(14, 1, 4, 1)
+    rect(ld, x0 + 1, y0 + 2, x1 - 1, y1 - 1, "tech_b")
+    rect(ld, x0 + 1, y0 + 2, x1 - 1, y0 + 3, "paper")
+    rect(ld, x0 + 1, y1 - 2, x1 - 1, y1 - 1, "base_dark")
+    for mx in (x0 + 6, x0 + 34):
+        rect(ld, mx, y0 + 3, mx + 17, y0 + 9, "monitor")
+        rect(ld, mx + 1, y0 + 4, mx + 16, y0 + 7, "hit_red")
+    for i, (cx, cy) in enumerate([(1, 3), (1, 7), (1, 11), (29, 3)]):
+        rack(ld, cx, cy, 2, 3, i * 2, screen=False)
+    for cx, cy in L2B_DESKS:
+        pc_desk_err(ld, cx, cy)
+    lay_on(img, lay)
+    put_door(img, d, 26, "exam_red")
+    return finish(img)
+
+
+# ---------- Львовка: аудитория перед экзаменом
+H2_DESKS = [(4, 4), (4, 7), (4, 10), (4, 13), (22, 4), (22, 7), (22, 10), (22, 13)]
+H2_WALLS = ([w for x, y in H2_DESKS for w in ([x, y, 4, 1], [x + 1, y + 1, 2, 1])]
+            + [[14, 1, 4, 1], [1, 1, 2, 1], [30, 1, 1, 1], [29, 14, 2, 2], [1, 16, 3, 1]])
+
+
+def bg_level3_hall2():
+    """Львовка, вторая комната: аудитория перед экзаменом. Парты рядами с бланками, на доске формулы и таймер,
+    часы на стене, стопки бумаг, тёмные стены. Вход снизу (клетки 15-16), выход сверху (клетки 26-27)."""
+    img, d = shell("wall_dark", "outline", lambda dd: floor_boards(dd, HT, HT, HW - HT, HH - HT), hi="hse_blue_dark")
+    x0, y0, x1, y1 = cell(15, 13, 2, 4)  # красная дорожка
+    rect(d, x0, y0, x1, y1, "exam_red")
+    rect(d, x0 + 2, y0 + 2, x1 - 2, y1, "enemy_red_dark")
+    rect(d, x0 + 4, y0 + 4, x1 - 4, y1, "exam_red")
+    dots(d, 100, 19, ["shadow", "step_b", "paper"])
+    lay = new_layer()
+    ld = ImageDraw.Draw(lay)
+    chalkboard(ld, 160, 1, 380, [(10, 3, "S"), (24, 3, "[a,b]"), (56, 3, "A^B"), (84, 3, "{xn}"), (122, 3, "T-1")])
+    disc(ld, 440, 7, 5, "paper")  # часы на стене
+    rect(ld, 440, 3, 440, 7, "outline")
+    rect(ld, 440, 7, 443, 7, "outline")
+    x0, y0, x1, y1 = cell(14, 1, 4, 1)  # стол преподавателя: бланки, таймер, печать
+    rect(ld, x0 + 1, y0 + 2, x1 - 1, y1 - 1, "wood")
+    rect(ld, x0 + 1, y0 + 2, x1 - 1, y0 + 3, "wood_light")
+    rect(ld, x0 + 1, y1 - 2, x1 - 1, y1 - 1, "wood_dark")
+    rect(ld, x0 + 5, y0 + 4, x0 + 20, y0 + 11, "paper")
+    rect(ld, x0 + 24, y0 + 4, x0 + 36, y0 + 11, "paper")
+    disc(ld, x0 + 46, y0 + 8, 5, "paper")
+    disc(ld, x0 + 46, y0 + 8, 3, "exam_red")
+    for i, (cx, cy) in enumerate(H2_DESKS):
+        desk(ld, cx, cy)
+        bx, by, bx1, by1 = cell(cx, cy, 4, 1)
+        exam_sheet(ld, bx + 8, by + 4, "2" if i % 4 == 1 else "F" if i % 4 == 3 else None)
+        rect(ld, bx + 24, by + 6, bx + 30, by + 8, "pack")  # карандаш
+    x0, y0, x1, y1 = cell(29, 14, 2, 2)  # стопки бланков
+    for sx, sy in ((x0 + 2, y0 + 17), (x0 + 2, y0 + 5), (x0 + 16, y0 + 11)):
+        rect(ld, sx, sy, sx + 11, sy + 10, "paper")
+        rect(ld, sx, sy + 8, sx + 11, sy + 10, "step_b")
+        rect(ld, sx + 2, sy + 3, sx + 9, sy + 3, "step_b")
+    x0, y0, x1, y1 = cell(1, 16, 3, 1)  # ящик с бланками
+    rect(ld, x0 + 1, y0 + 3, x1 - 1, y1 - 2, "box")
+    rect(ld, x0 + 1, y0 + 3, x1 - 1, y0 + 5, "wood_light")
+    x0, y0, x1, y1 = cell(1, 1, 2, 1)
+    rect(ld, x0 + 1, y0 + 1, x1 - 1, y1 - 1, "box")
+    rect(ld, x0 + 1, y0 + 1, x1 - 1, y0 + 3, "wood_light")
+    rect(ld, x0 + 13, y0 + 1, x0 + 16, y1 - 1, "wood_dark")
+    x0, y0, x1, y1 = cell(30, 1)
+    rect(ld, x0 + 3, y0 + 8, x1 - 3, y1 - 1, "pot")
+    disc(ld, x0 + 7, y0 + 5, 6, "leaf_dark")
+    disc(ld, x0 + 6, y0 + 4, 4, "leaf")
+    lay_on(img, lay)
+    put_door(img, d, 26, "hse_blue_dark")
+    return finish(img)
+
+
+# ---------------------------------------------------------------- пули: слово, нули и единицы, производная
+# Пули: 8 готовых положений (0, 45, 90, ... 315 градусов против часовой, 0 = вправо, 90 = вверх), файл 32x32,
+# центр пули в центре файла. В игре рисуются 1:1 в (x - 16, y - 16), ничего поворачивать не нужно. 2 кадра мерцания.
+FONT.update({
+    "s": ["...", ".##", "##.", "..#", "##."], "h": ["#..", "#..", "##.", "#.#", "#.#"],
+    "'": ["#", "#", ".", ".", "."],
+})
+# (уровень, чей): текст или поколение, цвет букв, цвет искр. Герой холодный/жёлтый, боссы красно-оранжевые.
+BULLETS = {
+    (1, "player"): dict(text="shoot", col="pack", spark="paper"),
+    (1, "boss"): dict(text="shoot", col="exam_red", spark="enemy_orange"),
+    (2, "player"): dict(text=("1010", "0101"), col="screen", spark="bar_green_light"),
+    (2, "boss"): dict(text=("1010", "0101"), col="hit_red", spark="led_amber"),
+    (3, "player"): dict(text="f'(x)", col="paper", spark="screen"),
+    (3, "boss"): dict(text="f'(x)", col="exam_red", spark="paper"),
+}
+
+
+BULLET_ANGLES = (0, 45, 90, 135, 180, 225, 270, 315)  # 0 вправо, 90 вверх, 180 влево, 270 вниз (против часовой)
+
+
+def rot_pixels(img, angle):
+    """Поворот пиксель-арта: на 45° через 4x-копию и голосование по блокам 4x4, чтобы буквы не рассыпались."""
+    if angle % 90 == 0:
+        return img.rotate(angle, resample=Image.NEAREST)
+    big = img.resize((128, 128), Image.NEAREST).rotate(angle, resample=Image.NEAREST)
+    out = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    bp, op = big.load(), out.load()
+    for y in range(32):
+        for x in range(32):
+            cnt = {}
+            for yy in range(4):
+                for xx in range(4):
+                    c = bp[x * 4 + xx, y * 4 + yy]
+                    if c[3]:
+                        cnt[c] = cnt.get(c, 0) + 1
+            if sum(cnt.values()) >= 6:
+                op[x, y] = max(cnt, key=cnt.get)
+    return out
+
+
+def bullet(level, who, frame, angle=0):
+    """Пуля, повёрнутая на angle градусов против часовой от «вправо». Файл 32x32, центр пули в (16, 16)."""
+    cfg = BULLETS[(level, who)]
+    body = Image.new("RGBA", (32, 32), (0, 0, 0, 0))  # слово и след, нарисованные горизонтально
+    d = ImageDraw.Draw(body)
+    txt = cfg["text"][frame - 1] if isinstance(cfg["text"], tuple) else cfg["text"]
+    tw = text_width(txt)
+    x0, y0 = (32 - tw) // 2 + 1, 8 + 5 - 3 + (frame - 1)  # на втором кадре текст на 1 px ниже
+    text(d, x0, y0, txt, cfg["col"])
+    for k in range(3):  # след позади (слева) отдельными точками, не слипается с текстом
+        d.point((max(1, x0 - 7) + k * 2, y0 + 1 + k % 2 + (frame - 1)), fill=P[cfg["col"]])
+    sparks = Image.new("RGBA", (32, 32), (0, 0, 0, 0))  # искры, пыль мела, помехи
+    sd = ImageDraw.Draw(sparks)
+    seed = frame * 7 + level * 3 + (1 if who == "boss" else 0)
+    for i in range(7 if level == 2 else 4):
+        sd.point((3 + (seed * (i + 3) * 13 + i * 29) % 26, 8 + 2 + (seed * (i + 5) * 7 + i * 11) % 12), fill=P[cfg["spark"]])
+    if level == 2:  # помехи: горизонтальные сбои строк
+        gy = 8 + 3 + (frame * 5) % 9
+        for x in range(2 + frame * 3, 8 + frame * 3):
+            sd.point((x, gy), fill=P[cfg["spark"]])
+        for x in range(20 - frame * 2, 26 - frame * 2):
+            sd.point((x, 8 + 14 - ((frame * 5) % 9 + 3) // 3), fill=P["paper"] if who == "player" else P["exam_red"])
+    if angle:
+        body = rot_pixels(body, angle)  # вокруг центра (16, 16), против часовой
+        sparks = rot_pixels(sparks, angle)
+    outline(body, P["outline"])  # контур 1 px строится после поворота, чтобы остался чистым на диагоналях
+    bp, sp = body.load(), sparks.load()
+    for y in range(32):
+        for x in range(32):
+            if bp[x, y][3] == 0 and sp[x, y][3]:
+                bp[x, y] = sp[x, y]
+    return body
+
+
+def save_bullets():
+    """12 пуль (3 уровня x герой/босс) x 8 направлений x 2 кадра мерцания."""
+    for (level, who), _ in BULLETS.items():
+        for angle in BULLET_ANGLES:
+            for frame in (1, 2):
+                save(bullet(level, who, frame, angle), "fx_bullet_l%d_%s_%d_%d" % (level, who, angle, frame))
+
+
+SIZES = {"bg_": (960, 540), "boss_": (64, 64), "ui_": (320, 44), "fx_bullet_": (32, 32)}  # остальное 32x32
 
 
 def check():
@@ -2173,6 +2648,7 @@ if __name__ == "__main__":
     save_hp_bars()
     save_character("player")
     save_character("boss_level3")
+    save_heal_anim()
     save(bg_level1_yard(), "bg_level1_yard")
     save(bg_entrance_l1(), "bg_entrance_l1")
     save(bg_level1_boss(), "bg_level1_boss")
@@ -2183,8 +2659,14 @@ if __name__ == "__main__":
     save(bg_level3_boss(), "bg_level3_boss")
     for npc_key in ("npc_l1_entrance_npc", "npc_l2_entrance_npc", "npc_l3_entrance_npc"):
         save(globals()[npc_key](), npc_key)
-    for creature in ("enemy_english_melee", "enemy_binary_melee", "enemy_formula_melee", "enemy_hse_bird"):
+    save(fx_heal(), "fx_heal")
+    save_bullets()
+    save(bg_level1_yard2(), "bg_level1_yard2")
+    save(bg_level2_class2(), "bg_level2_class2")
+    save(bg_level3_hall2(), "bg_level3_hall2")
+    for creature in ("enemy_english_melee", "enemy_binary_melee", "enemy_formula_melee"):
         save_creature(creature)
+    save_bird("enemy_hse_bird")
     save_character("boss_level1")
     save_character("boss_level2")
     problems = check()
