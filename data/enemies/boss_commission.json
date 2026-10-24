@@ -1,6 +1,6 @@
 {
   "id": "boss_commission",
-  "name": "Комиссия",
+  "name": "Препод по матану",
   "kind": "boss",
   "sprite": "boss_level3",
   "hp": 60,
