@@ -1,4 +1,5 @@
 import pygame
+from src import settings
 from src.core.scene_manager import Scene
 from src.core.state import GameState
 from src.entities.player import Player
@@ -17,7 +18,7 @@ except ImportError:
     # пока dialogue.py не лежит в src/systems, игра идёт без диалогов
     DialogueSession = None
 
-TALK_RADIUS = 60
+TALK_RADIUS = 80
 ADVANCE_KEYS = (pygame.K_e, pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE)
 EVENT_SOUNDS = (("enemy_killed", "kill"), ("player_hit", "hit"), ("player_dead", "death"))
 
@@ -67,7 +68,8 @@ class GameScene(Scene):
             return
         if self.dialogue is not None:
             if event.key in ADVANCE_KEYS and self.dialogue.advance():
-                apply_result(self.dialogue, self.state, self.used_dialogues)
+                if apply_result(self.dialogue, self.state, self.used_dialogues).get("heal"):
+                    self.player.on_heal()
                 self.dialogue = None
             elif event.key == pygame.K_ESCAPE:
                 self.dialogue = None
@@ -103,6 +105,7 @@ class GameScene(Scene):
             for kind, amount in self.room.collect_pickups(self.player.rect):
                 if kind == "heal":
                     self.state.heal(amount)
+                    self.player.on_heal()
                     play_sound("pickup")
 
         if "player_dead" in events:
@@ -119,12 +122,26 @@ class GameScene(Scene):
         actors = [e for e in self.enemies if e.alive] + [self.player]
         for actor in sorted(actors, key=lambda a: a.y):
             actor.draw(surface)
-        self.combat.draw(surface)
+        self.combat.draw(surface, self.state.level_index + 1)
         self.hud.draw(surface)
         if self.dialogue is not None:
             draw_dialogue(surface, self.dialogue)
             return
+        for npc_id, (cx, cy), dialogue_id in self.room.npcs:
+            if dialogue_id not in self.used_dialogues:
+                x, top = npc_top_left(cx, cy)
+                bob = int(pygame.time.get_ticks() / 250) % 2 * 2
+                by = top - 6 - bob
+                pygame.draw.circle(surface, (28, 28, 46), (cx, by), 11)
+                pygame.draw.circle(surface, (255, 214, 90), (cx, by), 9)
+                draw_text(surface, "!", (cx, by), 20, (28, 28, 46), center=True)
         npc = self.nearby_npc()
         if npc is not None:
             x, top = npc_top_left(*npc[1])
-            draw_text(surface, "E — поговорить", (npc[1][0], top - 12), 18, center=True)
+            draw_text(surface, "E — поговорить", (npc[1][0], top - 30), 18, center=True)
+        level = getattr(settings, "DIFFICULTIES", {}).get(getattr(settings, "DIFFICULTY", ""), {}).get("name")
+        if level:
+            label = pygame.Surface((150, 22), pygame.SRCALPHA)
+            label.fill((15, 15, 30, 170))
+            surface.blit(label, (16, 60))
+            draw_text(surface, f"Сложность: {level}", (24, 62), 16, (220, 220, 230))
