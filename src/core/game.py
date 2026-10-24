@@ -7,10 +7,20 @@ from src.scenes.game_scene import GameScene
 from src.scenes.end_scene import EndScene
 
 
+def open_window(fullscreen):
+    """Окно 960x540, растянутое на весь экран с сохранением пропорций (SCALED). F11 переключает режим."""
+    size = (settings.SCREEN_W, settings.SCREEN_H)
+    flags = pygame.SCALED | (pygame.FULLSCREEN if fullscreen else 0)
+    try:
+        return pygame.display.set_mode(size, flags)
+    except pygame.error:
+        return pygame.display.set_mode(size)
+
+
 class Game:
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((settings.SCREEN_W, settings.SCREEN_H))
+        self.screen = open_window(getattr(settings, "FULLSCREEN", True))
         pygame.display.set_caption(settings.TITLE)
         self.clock = pygame.time.Clock()
         self.running = True
@@ -22,10 +32,18 @@ class Game:
     def quit(self):
         self.running = False
 
+    def toggle_fullscreen(self):
+        try:
+            pygame.display.toggle_fullscreen()
+        except pygame.error:
+            pass
+
     def step(self, dt):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.quit()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                self.toggle_fullscreen()
             elif self.scenes.current:
                 self.scenes.current.handle_event(event)
         if self.scenes.current:
