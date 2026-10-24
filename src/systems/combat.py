@@ -70,6 +70,6 @@ class CombatSystem:
         elif result == "dead":
             events.append("player_dead")
 
-    def draw(self, surface):
+    def draw(self, surface, level=None):
         for p in self.projectiles:
-            p.draw(surface)
+            p.draw(surface, level)
