@@ -140,29 +140,15 @@
     {
       "type": "english_melee",
       "pos": [
-        16,
-        6
-      ]
-    },
-    {
-      "type": "english_melee",
-      "pos": [
-        16,
-        11
+        26,
+        2
       ]
     },
     {
       "type": "hse_bird",
       "pos": [
-        20,
-        9
-      ]
-    },
-    {
-      "type": "hse_bird",
-      "pos": [
-        10,
-        12
+        3,
+        8
       ]
     }
   ],

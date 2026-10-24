@@ -224,29 +224,22 @@
     {
       "type": "binary_melee",
       "pos": [
-        16,
-        6
+        26,
+        2
       ]
     },
     {
       "type": "binary_melee",
       "pos": [
-        16,
-        11
+        3,
+        3
       ]
     },
     {
-      "type": "hse_bird",
+      "type": "hse_bird_l2",
       "pos": [
-        20,
-        9
-      ]
-    },
-    {
-      "type": "hse_bird",
-      "pos": [
-        10,
-        12
+        19,
+        6
       ]
     }
   ],
