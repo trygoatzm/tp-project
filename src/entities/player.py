@@ -7,6 +7,8 @@ DIRS = ["e", "se", "s", "sw", "w", "nw", "n", "ne"]
 FRAME_COUNT = {"idle": 2, "walk": 4, "shoot": 2, "walkshoot": 4}
 FRAME_RATE = {"idle": 2, "walk": 8, "walkshoot": 8}
 SHOT_FLASH_TIME = 0.1
+HEAL_FLASH_TIME = 0.36       # после кофе герой мигает коричневым
+HEAL_BLINK = 0.08
 DRAW_SIZE = 48              # размер картинки героя на экране (как у врагов)
 FEET = 31 / 32              # низ ног в кадре (доля высоты картинки)
 # Кончик пальца относительно центра картинки при размере 20 px (docs/ART_LOG.md, раздел 3.3); масштабируется под DRAW_SIZE.
@@ -36,6 +38,7 @@ class Player:
         self.action = "idle"
         self.anim_time = 0.0
         self.shot_flash = 0.0
+        self.heal_flash = 0.0
 
     @property
     def rect(self):
@@ -55,9 +58,14 @@ class Player:
         self.cooldown = 0.0
         self.invuln = 0.0
         self.shot_flash = 0.0
+        self.heal_flash = 0.0
+
+    def on_heal(self):
+        self.heal_flash = HEAL_FLASH_TIME
 
     def update(self, dt, room, move, aim_point, shooting):
         self.cooldown = max(0.0, self.cooldown - dt)
+        self.heal_flash = max(0.0, self.heal_flash - dt)
         self.invuln = max(0.0, self.invuln - dt)
         self.shot_flash = max(0.0, self.shot_flash - dt)
 
@@ -131,7 +139,9 @@ class Player:
             n = 2 if self.shot_flash > 0 else 1
         else:
             n = int(self.anim_time * FRAME_RATE[self.action]) % FRAME_COUNT[self.action] + 1
-        return f"player_{self.action}_{self.facing}_{n}"
+        # кадр идёт как обычно, через каждые 0.08 с подменяется коричневой копией player_brown_*
+        brown = self.heal_flash > 0 and int(self.heal_flash / HEAL_BLINK) % 2 == 0
+        return f"player_{'brown_' if brown else ''}{self.action}_{self.facing}_{n}"
 
     def draw(self, surface):
         if not self.visible:
