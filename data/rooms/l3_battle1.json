@@ -122,29 +122,29 @@
     {
       "type": "formula_melee",
       "pos": [
-        16,
+        26,
+        2
+      ]
+    },
+    {
+      "type": "formula_melee",
+      "pos": [
+        3,
         6
       ]
     },
     {
       "type": "formula_melee",
       "pos": [
-        16,
+        24,
         11
       ]
     },
     {
-      "type": "hse_bird",
+      "type": "hse_bird_l3",
       "pos": [
-        20,
-        9
-      ]
-    },
-    {
-      "type": "hse_bird",
-      "pos": [
-        10,
-        12
+        19,
+        4
       ]
     }
   ],
