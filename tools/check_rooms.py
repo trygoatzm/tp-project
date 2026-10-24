@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT))
 from src.systems.level_loader import load_levels, load_room  # noqa: E402
 from src.systems.rooms import intersects  # noqa: E402
 
-PLAYER, ENEMY, BOSS = 20, 24, 56
+PLAYER, ENEMY, BOSS = 24, 24, 56
 
 
 def tile_of(room, point):
