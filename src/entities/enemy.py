@@ -1,6 +1,8 @@
 import math
 from collections import deque
 
+from src.entities.projectile import Projectile
+
 # Спрайты, для которых нарисованы анимации (ключи вида <sprite>_<действие>_<сторона>_<кадр>).
 ANIMATED_SPRITES = ("enemy_english_melee", "enemy_binary_melee", "enemy_formula_melee", "enemy_hse_bird")
 DIRS = ["e", "se", "s", "sw", "w", "nw", "n", "ne"]
@@ -8,6 +10,11 @@ FRAME_COUNT = {"idle": 2, "walk": 4}
 FRAME_RATE = {"idle": 2, "walk": 8}
 DRAW_SIZE = 48              # размер картинки врага на экране (хитбокс SIZE не меняется)
 FEET = 31 / 32              # низ ног в кадре (доля высоты картинки)
+SHOT_FLASH_TIME = 0.1
+BEAK_BASE = 24              # точки клюва в логе измерены для размера 24
+# Кончик открытого клюва ворона относительно центра картинки (docs/ART_LOG.md, раздел 3.3).
+BEAK = {"s": (0, 3), "se": (4, 2), "e": (9, -1), "ne": (8, -1),
+        "n": (0, -10), "nw": (-8, -1), "w": (-9, -1), "sw": (-4, 2)}
 
 
 def dir8(dx, dy):
@@ -39,6 +46,9 @@ class Enemy:
         self.speed = data["speed"]
         self.contact_damage = data["contact_damage"]
         self.attack = data.get("attack")
+        # kind "ranged" (ворон ВШЭ): {"range", "windup", "cooldown", "projectile_speed", "damage"}
+        self.shoot = data.get("shoot")
+        self.shot_flash = 0.0
         self.x, self.y = float(pos[0]), float(pos[1])
         self.alive = True
         self.hurt_timer = 0.0
@@ -151,6 +161,10 @@ class Enemy:
         if not self.alive:
             return
         self.hurt_timer = max(0.0, self.hurt_timer - dt)
+        self.shot_flash = max(0.0, self.shot_flash - dt)
+        if self.attack is None:
+            self._update_ranged(dt, room, target)
+            return
         a = self.attack
         if self.state == "chase":
             dir_, dist = direction(self.center, target)
@@ -180,9 +194,66 @@ class Enemy:
         else:
             self.anim_time += dt
 
+    def _update_ranged(self, dt, room, target):
+        """Стрелок: идёт к герою, пока тот дальше range или за стеной; потом замах, одна пуля, пауза."""
+        sh = self.shoot
+        dir_, dist = direction(self.center, target)
+        if self.state == "chase":
+            if dist <= sh["range"] and self._line_clear(room, self.center, target):
+                self.state, self.timer, self.strike_dir = "windup", sh["windup"], dir_
+            else:
+                self._step_towards(dt, room, target, self.speed)
+        elif self.state == "windup":
+            self.timer -= dt
+            self.strike_dir = dir_
+            if self.timer <= 0:
+                self._fire(target)
+                self.state, self.timer = "cooldown", sh["cooldown"]
+        else:
+            self.timer -= dt
+            if self.timer <= 0:
+                self.state = "chase"
+
+        aiming = self.state == "windup" or self.shot_flash > 0
+        self.facing = dir8(*(self.strike_dir if aiming else dir_))
+        action = "walk" if self.state == "chase" else ("shoot" if aiming else "idle")
+        if action != self.anim:
+            self.anim = action
+            self.anim_time = 0.0
+        else:
+            self.anim_time += dt
+
+    def beak_point(self):
+        x, y, w, h = self.draw_rect()
+        k = DRAW_SIZE / BEAK_BASE
+        ox, oy = BEAK[self.facing]
+        return self.x + ox * k, y + h / 2 + oy * k
+
+    def _fire(self, target):
+        sh = self.shoot
+        sx, sy = self.beak_point()
+        (ux, uy), _ = direction((sx, sy), target)
+        self._projectiles.append(Projectile(sx, sy, ux * sh["projectile_speed"], uy * sh["projectile_speed"],
+                                            damage=sh.get("damage", 1), owner="enemy",
+                                            lifetime=sh["range"] / sh["projectile_speed"] + 0.3))
+        self.shot_flash = SHOT_FLASH_TIME
+
+    def _shoot_action(self):
+        """Кадры выстрела: shoot (клюв), а если их нет в manifest, запасные attack."""
+        try:
+            from src.systems.assets import _load_manifest
+            if f"{self.sprite}_shoot_{self.facing}_1" in _load_manifest():
+                return "shoot"
+        except ImportError:
+            pass
+        return "attack"
+
     def frame_key(self):
         if self.sprite not in ANIMATED_SPRITES:
             return self.sprite
+        if self.anim == "shoot":
+            n = 2 if self.shot_flash > 0 else 1
+            return f"{self.sprite}_{self._shoot_action()}_{self.facing}_{n}"
         if self.anim == "attack":
             n = 2 if self.state == "strike" else 1
         else:
@@ -204,5 +275,5 @@ class Enemy:
             pygame.draw.rect(surface, (200, 60, 60), self.rect)
         if self.hurt_timer > 0:
             pygame.draw.rect(surface, (255, 255, 255), (x + 8, y + 4, w - 16, h - 6), 2)
-        if self.state == "windup":
+        if self.state == "windup" and self.attack is not None:
             pygame.draw.circle(surface, (255, 200, 0), (int(self.x), int(y)), 4)
