@@ -40,15 +40,20 @@ class Projectile:
         if self.lifetime <= 0 or (room is not None and room.blocked(self.rect)):
             self.alive = False
 
+    def angle(self):
+        """Направление полёта, округлённое до 45 градусов: 0 вправо, 90 вверх, 180 влево, 270 вниз."""
+        return round(math.degrees(math.atan2(-self.vy, self.vx)) / 45) * 45 % 360
+
     def draw(self, surface, level=None):
-        """level = номер уровня 1..3: пуля-картинка fx_bullet_l<уровень>_<player|boss>_<кадр>, иначе кружок."""
+        """level = номер уровня 1..3: пуля-картинка fx_bullet_l<уровень>_<player|boss>_<угол>_<кадр>, иначе кружок.
+        Картинка 32x32 уже повёрнута в файле, центр картинки = центр снаряда."""
         import pygame
         if level is not None:
             from src.systems import assets
             who = "player" if self.owner == "player" else "boss"
-            key = f"fx_bullet_l{level}_{who}_{int(self.age * 8) % 2 + 1}"
+            key = f"fx_bullet_l{level}_{who}_{self.angle()}_{int(self.age * 8) % 2 + 1}"
             if key in assets._load_manifest():
-                surface.blit(assets.get_image(key, (32, 16)), (self.x - 16, self.y - 8))
+                surface.blit(assets.get_image(key, (32, 32)), (self.x - 16, self.y - 16))
                 return
         color = (255, 230, 90) if self.owner == "player" else (255, 90, 90)
         pygame.draw.circle(surface, color, (int(self.x), int(self.y)), self.radius)
