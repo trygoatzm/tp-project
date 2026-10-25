@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 ROOM_TYPES = {"entrance", "battle", "boss"}
-ENEMY_KINDS = {"melee", "boss"}
+ENEMY_KINDS = {"melee", "ranged", "boss"}
 ATTACK_TYPES = {"fan", "dash"}
 
 
