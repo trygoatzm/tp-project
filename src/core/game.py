@@ -1,3 +1,9 @@
+import os
+import sys
+
+# Без сглаживания при растягивании кадра: пиксель-арт остаётся чётким. Ставится до импорта pygame.
+os.environ.setdefault("SDL_RENDER_SCALE_QUALITY", "nearest")
+
 import pygame
 
 from src import settings
@@ -7,8 +13,25 @@ from src.scenes.game_scene import GameScene
 from src.scenes.end_scene import EndScene
 
 
+def make_dpi_aware():
+    """Windows с масштабом экрана 125 % или 150 % сам растягивает окно и размывает его.
+    Если сказать системе, что игра сама следит за масштабом, она получает настоящие пиксели экрана."""
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        except (AttributeError, OSError):
+            ctypes.windll.user32.SetProcessDPIAware()
+    except (AttributeError, OSError):
+        pass
+
+
 def open_window(fullscreen):
-    """Окно 960x540, растянутое на весь экран с сохранением пропорций (SCALED). F11 переключает режим."""
+    """Игра рисует кадр 960x540, а pygame (SCALED) растягивает его на весь экран с сохранением пропорций:
+    на Full HD ровно в 2 раза (1920x1080), на других экранах пропорционально, без сглаживания.
+    F11 переключает окно и полный экран."""
     size = (settings.SCREEN_W, settings.SCREEN_H)
     flags = pygame.SCALED | (pygame.FULLSCREEN if fullscreen else 0)
     try:
@@ -19,6 +42,7 @@ def open_window(fullscreen):
 
 class Game:
     def __init__(self):
+        make_dpi_aware()
         pygame.init()
         self.screen = open_window(getattr(settings, "FULLSCREEN", True))
         pygame.display.set_caption(settings.TITLE)

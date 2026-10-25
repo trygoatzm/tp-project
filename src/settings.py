@@ -19,3 +19,10 @@ PLAYER_SPEED = 220
 INVULN_TIME = 1.0
 
 RED_DIPLOMA_MAX_DEATHS = 0
+DIFFICULTY_ORDER = ("easy", "normal", "hard")
+DIFFICULTY = "normal"
+DIFFICULTIES = {
+      "easy":   {"name": "Лёгкая",  "hp": 0.6, "speed": 0.8, "cooldown": 1.4, "windup": 1.3,  "projectiles": 0.6},
+      "normal": {"name": "Средняя", "hp": 0.8, "speed": 0.9, "cooldown": 1.2, "windup": 1.15, "projectiles": 0.8},
+      "hard":   {"name": "Сложная", "hp": 1.0, "speed": 1.0, "cooldown": 1.0, "windup": 1.0,  "projectiles": 1.0},
+  }
